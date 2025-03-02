@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "lint": "eslint --ext .js,.vue src",
+    "lint:fix": "eslint --ext .js,.vue src --fix"
+  }
+} 
