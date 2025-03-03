@@ -2,17 +2,17 @@ from flask import jsonify
 
 class Result:
     @staticmethod
-    def success(data=None, message="请求成功"):
+    def success(data=None, message="操作成功", code=200):
         return jsonify({
-            "status": "success",
+            "code": 200,
             "message": message,
             "data": data
-        }), 201
+        })
 
     @staticmethod
-    def error(message="出现异常", data=None, status_code=400):
+    def error(message="操作失败", code=400, data=None):
         return jsonify({
-            "status": "error",
+            "code": code,
             "message": message,
             "data": data
-        }), status_code
+        }), code

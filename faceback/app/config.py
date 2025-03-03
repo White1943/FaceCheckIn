@@ -22,6 +22,9 @@ class Config:
     # 日志配置
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 
+    JWT_SECRET_KEY = 'your-secret-key'  # 建议使用环境变量
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)  # token 过期时间
+
 
 class DevelopmentConfig(Config):
     DEBUG = True
