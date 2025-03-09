@@ -29,7 +29,8 @@ def create_app(config_class=Config):
 
         # 注册蓝图
     from  .auth import auth_bp
-    from  .routes import  face_bp, course_bp
+    from  .routes import  face_bp
+    from .courses import course_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(face_bp, url_prefix='/api/face')

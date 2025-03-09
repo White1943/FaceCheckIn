@@ -3,6 +3,7 @@ import face_recognition
 from flask import Flask, jsonify, request, redirect, Blueprint
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
+from app.models.attendance_task import AttendanceTask
 from app.models.user import User
 from app.utils.face_utils import FaceUtils
 from app.utils.response import Result
@@ -22,7 +23,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 app = Flask(__name__)
 face_bp = Blueprint('api/face', __name__)
 face_utils = FaceUtils()
-course_bp = Blueprint('api/course', __name__)
+
 
 
 def allowed_file(filename):
@@ -147,7 +148,7 @@ def check_in():
             now = datetime.now()
             status = '正常' if now <= task.end_time else '迟到'
 
-            attendance = Attendance(
+            attendance_record = AttendanceRecord(
                 user_id=user_id,
                 task_id=task_id,
                 check_in_time=now,
@@ -155,7 +156,7 @@ def check_in():
                 face_image=upload_path
             )
 
-            db.session.add(attendance)
+            db.session.add(attendance_record)
             db.session.commit()
 
             return Result.success(message="签到成功")
@@ -198,66 +199,3 @@ def get_tasks():
     except Exception as e:
         print(f"Get tasks error: {str(e)}")
         return Result.error("获取签到任务失败")
-
-@course_bp.route('/courses', methods=['POST'])
-@jwt_required()
-def create_course():
-    try:
-        user_id = get_jwt_identity()
-        data = request.get_json()
-
-        # 验证必填字段
-        required_fields = ['courseName', 'semester', 'startTime', 'location']
-        for field in required_fields:
-            if field not in data:
-                return Result.error(f"缺少必填字段: {field}")
-
-        # 获取对应的下课时间
-        end_time = Course.get_end_time(data['startTime'])
-        if not end_time:
-            return Result.error("无效的上课时间")
-
-        course = Course(
-            course_name=data['courseName'],
-            teacher_id=user_id,
-            semester=data['semester'],
-            description=data.get('description', ''),
-            start_time=datetime.strptime(data['startTime'], '%H:%M').time(),
-            end_time=datetime.strptime(end_time, '%H:%M').time(),
-            location=data['location']
-        )
-
-        db.session.add(course)
-        db.session.commit()
-
-        return Result.success(message="课程创建成功")
-
-    except Exception as e:
-        print(f"Create course error: {str(e)}")
-        return Result.error("创建课程失败")
-
-@course_bp.route('/courses', methods=['GET'])
-@jwt_required()
-def get_courses():
-    try:
-        user_id = get_jwt_identity()
-        user = User.query.get(user_id)
-
-        if user.role == '教师':
-            courses = Course.query.filter_by(teacher_id=user_id).all()
-        else:
-            courses = user.enrolled_courses
-
-        return Result.success(data=[{
-            'courseId': c.course_id,
-            'courseName': c.course_name,
-            'semester': c.semester,
-            'startTime': c.start_time.strftime('%H:%M'),
-            'endTime': c.end_time.strftime('%H:%M'),
-            'location': c.location,
-            'description': c.description
-        } for c in courses])
-
-    except Exception as e:
-        print(f"Get courses error: {str(e)}")
-        return Result.error("获取课程列表失败")

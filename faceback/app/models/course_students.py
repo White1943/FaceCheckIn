@@ -8,6 +8,6 @@ class CourseStudents(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), primary_key=True)
     join_date = db.Column(db.DateTime, default=datetime.now)
 
-    # 简单的关系定义，不需要 backref
-    course = db.relationship('Course')
-    student = db.relationship('User')
+    # 简单的关系定义
+    course = db.relationship('Course', viewonly=True)
+    student = db.relationship('User', viewonly=True)

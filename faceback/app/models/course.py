@@ -9,18 +9,21 @@ class Course(db.Model):
     teacher_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
     semester = db.Column(db.String(20), nullable=False)
     description = db.Column(db.Text)
-    start_date = db.Column(db.Date)
-    end_date = db.Column(db.Date)
-    class_time = db.Column(db.String(100))
+    start_time = db.Column(db.Time)
+    end_time = db.Column(db.Time)
+
     location = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.now)
 
     # 关系
-    teacher = db.relationship('User', backref='teaching_courses')
-    students = db.relationship('User', 
-                             secondary='course_students',
-                             backref=db.backref('enrolled_courses', lazy='dynamic'),
-                             lazy='dynamic')
+    teacher = db.relationship('User', back_populates='teaching_courses')
+    students = db.relationship(
+        'User',
+        secondary='course_students',
+        back_populates='enrolled_courses',
+        lazy='dynamic',
+        overlaps="student,course"
+    )
 
     @staticmethod
     def get_end_time(start_time_str):

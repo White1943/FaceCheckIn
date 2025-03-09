@@ -13,6 +13,16 @@ class User(db.Model):
     status = db.Column(db.Integer, default=1)  # 1: 正常, 0: 禁用
     avatar = db.Column(db.String(255), default='/avatar2.jpg')  # 添加默认头像
 
+    # 修改关系定义
+    teaching_courses = db.relationship('Course', back_populates='teacher')
+    enrolled_courses = db.relationship(
+        'Course',
+        secondary='course_students',
+        back_populates='students',
+        lazy='dynamic',
+        overlaps="student,course"
+    )
+
     def set_password(self, password):
         self.password = generate_password_hash(password)
 
