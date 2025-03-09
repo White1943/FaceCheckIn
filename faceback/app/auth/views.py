@@ -53,7 +53,7 @@ def get_public_key():
         pem_str = pem.decode('utf-8')
         key_str = pem_str.replace('-----BEGIN PUBLIC KEY-----\n', '')
         key_str = key_str.replace('\n-----END PUBLIC KEY-----\n', '')
-
+        print("key_str公匙: "+key_str)
         return Result.success(data={'publicKey': key_str})
     except Exception as e:
         print(f"获取公钥失败: {str(e)}")
@@ -65,11 +65,11 @@ def login():
         data = request.get_json()
         username = data.get('username')
         password = data.get('password')
-
+        print("输入的加密密码的数据"+password)
         # 解密密码
         if password:
             password = decrypt_password(password, private_key)
-
+        print("解密后的密码"+password)
         if not username or not password:
             return Result.error("用户名和密码不能为空")
 
@@ -79,18 +79,14 @@ def login():
             if user.status == 0:
                 return Result.error("账号已被禁用")
 
-            # 生成 JWT token
+                # 创建JWT token，使用user.user_id作为identity
+            # 安全，避免在请求参数中明文传递用户ID
+            # 可靠，token中的用户ID不可被篡改
             access_token = create_access_token(identity=str(user.user_id))
-
+            print("JWT 即access_token="+access_token)
             return Result.success(data={
                 'token': access_token,
-                'user': {
-                    'username': user.username,
-                    'role': user.role,
-                    'realName': user.real_name,
-                    'email': user.email,
-                    'avatar': user.avatar  # 添加头像
-                }
+                'user': user.to_dict()
             }, message='登录成功')
 
         return Result.error("用户名或密码错误")
@@ -144,10 +140,10 @@ def get_profile():
     try:
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
-        
+
         if not user:
             return Result.error("用户不存在")
-            
+
         return Result.success(data={
             'username': user.username,
             'role': user.role,
@@ -155,7 +151,7 @@ def get_profile():
             'email': user.email,
             'avatar': user.avatar  # 添加头像
         }, message='获取成功')
-        
+
     except Exception as e:
         print("Get profile error:", str(e))
         return Result.error("获取用户信息失败")
