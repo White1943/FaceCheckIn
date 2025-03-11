@@ -3,4 +3,6 @@
  */
 //默认配置
 const { setting, theme, network } = require('./')
-module.exports = Object.assign({}, setting, theme, network)
+module.exports = Object.assign({}, setting, theme, network, {
+  defaultAvatar: '/avatar2.jpg'
+})

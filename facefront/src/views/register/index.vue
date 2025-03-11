@@ -5,172 +5,158 @@
         <div style="color: transparent">占位符</div>
       </el-col>
       <el-col :lg="8" :md="12" :sm="24" :xl="8" :xs="24">
-        <el-form ref="registerForm" class="register-form" :model="form" :rules="registerRules" size="mini">
+        <el-form ref="registerForm" :model="registerForm" :rules="registerRules" class="register-form">
+          <h3 class="title">{{ $baseTitle }} 注册</h3>
+          
           <el-form-item prop="username">
             <el-input
-              v-model.trim="form.username"
-              v-focus
-              auto-complete="off"
+              v-model="registerForm.username"
               placeholder="请输入用户名"
-              style="margin-top: 20px"
               type="text"
             >
-              <vab-icon slot="prefix" :icon="['fas', 'user-alt']" />
+              <vab-icon slot="prefix" :icon="['fas', 'user']" />
             </el-input>
           </el-form-item>
-          <el-form-item prop="phone">
-            <el-input v-model.trim="form.phone" autocomplete="off" maxlength="11" placeholder="请输入手机号" show-word-limit type="text">
-              <vab-icon slot="prefix" :icon="['fas', 'mobile-alt']" />
-            </el-input>
-          </el-form-item>
-          <el-form-item prop="phoneCode" style="position: relative">
-            <el-input v-model.trim="form.phoneCode" placeholder="手机验证码" type="text">
-              <vab-icon slot="prefix" :icon="['fas', 'envelope-open']" />
-            </el-input>
-            <el-button class="show-pwd phone-code" :disabled="isGetphone" type="primary" @click="getPhoneCode">
-              {{ phoneCode }}
-            </el-button>
-          </el-form-item>
+
           <el-form-item prop="password">
-            <el-input v-model.trim="form.password" autocomplete="new-password" placeholder="设置密码" type="password">
-              <vab-icon slot="prefix" :icon="['fas', 'unlock']" />
+            <el-input
+              v-model="registerForm.password"
+              placeholder="请输入密码"
+              type="password"
+            >
+              <vab-icon slot="prefix" :icon="['fas', 'lock']" />
             </el-input>
           </el-form-item>
-          <el-form-item>
-            <el-button class="register-btn" type="primary" @click.native.prevent="handleReister">注册</el-button>
-            <router-link to="/login">
-              <div style="margin-top: 20px">登录</div>
-            </router-link>
+
+          <el-form-item prop="confirmPassword">
+            <el-input
+              v-model="registerForm.confirmPassword"
+              placeholder="请确认密码"
+              type="password"
+            >
+              <vab-icon slot="prefix" :icon="['fas', 'lock']" />
+            </el-input>
           </el-form-item>
+
+          <el-form-item prop="realName">
+            <el-input
+              v-model="registerForm.realName"
+              placeholder="请输入真实姓名"
+              type="text"
+            >
+              <vab-icon slot="prefix" :icon="['fas', 'user']" />
+            </el-input>
+          </el-form-item>
+
+          <el-form-item prop="role">
+            <el-select v-model="registerForm.role" placeholder="请选择角色">
+              <el-option label="学生" value="学生" />
+              <el-option label="教师" value="教师" />
+              <el-option label="管理员" value="管理员"/>
+            </el-select>
+          </el-form-item>
+
+          <el-form-item prop="email">
+            <el-input
+              v-model="registerForm.email"
+              placeholder="请输入邮箱（选填）"
+              type="email"
+            >
+              <vab-icon slot="prefix" :icon="['fas', 'envelope']" />
+            </el-input>
+          </el-form-item>
+
+          <el-button :loading="loading" type="primary" @click.native.prevent="handleRegister">
+            注册
+          </el-button>
+          <router-link to="/login">
+            <div style="margin-top: 20px">已有账号？立即登录</div>
+          </router-link>
         </el-form>
       </el-col>
     </el-row>
   </div>
 </template>
-<script>
-  import { isPassword, isPhone } from '@/utils/validate'
-  import { register } from '@/api/user'
 
-  export default {
-    username: 'Register',
-    directives: {
-      focus: {
-        inserted(el) {
-          el.querySelector('input').focus()
-        },
+<script>
+import { register } from '@/api/user'
+import { isPassword } from '@/utils/validate'
+
+export default {
+  name: 'SysRegister',
+  data() {
+    const validatePassword = (rule, value, callback) => {
+      if (!isPassword(value)) {
+        callback(new Error('密码不能少于6位'))
+      } else {
+        callback()
+      }
+    }
+    const validateConfirmPassword = (rule, value, callback) => {
+      if (value !== this.registerForm.password) {
+        callback(new Error('两次输入的密码不一致'))
+      } else {
+        callback()
+      }
+    }
+    return {
+      registerForm: {
+        username: '',
+        password: '',
+        confirmPassword: '',
+        realName: '',
+        role: '',
+        email: '',
       },
-    },
-    data() {
-      const validateusername = (rule, value, callback) => {
-        if ('' == value) {
-          callback(new Error('用户名不能为空'))
-        } else {
-          callback()
-        }
-      }
-      const validatePassword = (rule, value, callback) => {
-        if (!isPassword(value)) {
-          callback(new Error('密码不能少于6位'))
-        } else {
-          callback()
-        }
-      }
-      const validatePhone = (rule, value, callback) => {
-        if (!isPhone(value)) {
-          callback(new Error('请输入正确的手机号'))
-        } else {
-          callback()
-        }
-      }
-      return {
-        isGetphone: false,
-        getPhoneIntval: null,
-        phoneCode: '获取验证码',
-        showRegister: false,
-        nodeEnv: process.env.NODE_ENV,
-        title: this.$baseTitle,
-        form: {},
-        registerRules: {
-          username: [
-            { required: true, trigger: 'blur', message: '请输入用户名' },
-            { max: 20, trigger: 'blur', message: '最多不能超过20个字' },
-            { validator: validateusername, trigger: 'blur' },
-          ],
-          phone: [
-            { required: true, trigger: 'blur', message: '请输入手机号码' },
-            { validator: validatePhone, trigger: 'blur' },
-          ],
-          password: [
-            { required: true, trigger: 'blur', message: '请输入密码' },
-            { validator: validatePassword, trigger: 'blur' },
-          ],
-          phoneCode: [{ required: true, trigger: 'blur', message: '请输入手机验证码' }],
-        },
-        loading: false,
-        passwordType: 'password',
-      }
-    },
-    created() {
-      document.body.style.overflow = 'hidden'
-    },
-    beforeDestroy() {
-      document.body.style.overflow = 'auto'
-      clearInterval(this.getPhoneIntval)
-      this.getPhoneIntval = null
-    },
-    methods: {
-      getPhoneCode() {
-        if (!isPhone(this.form.phone)) {
-          //this.$baseMessage('请输入手机号', 'error')
-          this.$refs['registerForm'].validateField('phone')
-          return
-        }
-        this.isGetphone = true
-        let n = 60
-        this.getPhoneIntval = setInterval(() => {
-          if (n > 0) {
-            n--
-            this.phoneCode = `重新获取(${n}s)`
-          } else {
-            clearInterval(this.getPhoneIntval)
-            this.getPhoneIntval = null
-            this.phoneCode = '获取验证码'
-            this.isGetphone = false
-          }
-        }, 1000)
+      registerRules: {
+        username: [{ required: true, trigger: 'blur', message: '请输入用户名' }],
+        password: [{ required: true, trigger: 'blur', validator: validatePassword }],
+        confirmPassword: [{ required: true, trigger: 'blur', validator: validateConfirmPassword }],
+        realName: [{ required: true, trigger: 'blur', message: '请输入真实姓名' }],
+        role: [{ required: true, trigger: 'change', message: '请选择角色' }],
+        email: [{ type: 'email', trigger: 'blur', message: '请输入正确的邮箱地址' }],
       },
-      handleReister() {
-        this.$refs['registerForm'].validate(async (valid) => {
-          if (valid) {
-            const param = {
-              username: this.form.username,
-              phone: this.form.phone,
-              password: this.form.password,
-              phoneCode: this.form.phoneCode,
-            }
-            const { msg } = await register(param)
-            this.$baseMessage(msg, 'success')
-          }
-        })
-      },
+      loading: false,
+    }
+  },
+  methods: {
+    async handleRegister() {
+      try {
+        await this.$refs.registerForm.validate()
+        this.loading = true
+        
+        const response = await register(this.registerForm)
+        this.$baseMessage('注册成功', 'success')
+        this.$router.push('/login')
+      } catch (error) {
+        console.error('注册失败:', error)
+        this.$baseMessage(error.message || '注册失败', 'error')
+      } finally {
+        this.loading = false
+      }
     },
-  }
+  },
+}
 </script>
+
 <style lang="scss" scoped>
   .register-container {
     height: 100vh;
     background: url('~@/assets/login_images/background.jpg') center center fixed no-repeat;
     background-size: cover;
+    overflow-y: auto;
+    padding: 20px 0;
 
     .title {
-      font-size: 54px;
+      font-size: 42px;
       font-weight: 500;
       color: rgba(14, 18, 26, 1);
+      margin-bottom: 30px;
     }
 
     .title-tips {
-      margin-top: 29px;
-      font-size: 26px;
+      margin-top: 15px;
+      font-size: 20px;
       font-weight: 400;
       color: rgba(14, 18, 26, 1);
       text-overflow: ellipsis;
@@ -179,8 +165,8 @@
 
     .register-btn {
       display: inherit;
-      width: 220px;
-      height: 60px;
+      width: 100%;
+      height: 45px;
       margin-top: 5px;
       border: 0;
 
@@ -191,22 +177,18 @@
 
     .register-form {
       position: relative;
-      max-width: 100%;
-      margin: calc((100vh - 499px) / 2) 10% 10%;
+      max-width: 520px;
+      margin: 50px auto;
       overflow: hidden;
+
+      @media screen and (min-height: 800px) {
+        margin-top: 100px;
+      }
 
       .forget-password {
         width: 100%;
         margin-top: 40px;
         text-align: left;
-
-        .forget-password {
-          width: 129px;
-          height: 19px;
-          font-size: 20px;
-          font-weight: 400;
-          color: rgba(92, 102, 240, 1);
-        }
       }
 
       .per-code {
@@ -226,6 +208,14 @@
         font-size: 14px;
         color: #fff;
         border-radius: 3px;
+      }
+
+      .el-form-item {
+        margin-bottom: 20px;
+      }
+
+      .el-select {
+        width: 100%;
       }
     }
 

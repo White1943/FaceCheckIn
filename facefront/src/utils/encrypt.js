@@ -11,20 +11,25 @@ const privateKey =
  * @returns {Promise<{param: PromiseLike<ArrayBuffer>}|*>}
  */
 export async function encryptedData(data) {
-  let publicKey = ''
-  const res = await getPublicKey()
-  publicKey = res.data.publicKey
-  if (res.data.mockServer) {
-    publicKey = ''
-  }
-  if (publicKey == '') {
+  try {
+    // 只加密密码字段
+    if (data.password) {
+      const res = await getPublicKey()
+      const publicKey = res.data.publicKey
+      
+      const encrypt = new JSEncrypt()
+      encrypt.setPublicKey(`-----BEGIN PUBLIC KEY-----${publicKey}-----END PUBLIC KEY-----`)
+      
+      // 只加密密码字段，其他字段保持原样
+      return {
+        ...data,
+        password: encrypt.encrypt(data.password)
+      }
+    }
     return data
-  }
-  const encrypt = new JSEncrypt()
-  encrypt.setPublicKey(`-----BEGIN PUBLIC KEY-----${publicKey}-----END PUBLIC KEY-----`)
-  data = encrypt.encrypt(JSON.stringify(data))
-  return {
-    param: data,
+  } catch (error) {
+    console.error('加密失败:', error)
+    return data
   }
 }
 

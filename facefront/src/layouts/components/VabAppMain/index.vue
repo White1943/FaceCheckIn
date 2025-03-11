@@ -9,14 +9,14 @@
     <footer v-show="footerCopyright" class="footer-copyright">
       Copyright
       <vab-icon :icon="['fas', 'copyright']"></vab-icon>
-      vue-admin-better 开源免费版 {{ fullYear }}
+      {{ projectName }} {{ fullYear }} | Powered by vue-admin-better
     </footer>
   </div>
 </template>
 
 <script>
   import { mapActions, mapGetters } from 'vuex'
-  import { copyright, footerCopyright, keepAliveMaxNum, title } from '@/config'
+  import { copyright, footerCopyright, keepAliveMaxNum, title, projectName } from '@/config'
 
   export default {
     name: 'VabAppMain',
@@ -29,6 +29,7 @@
         keepAliveMaxNum,
         routerView: true,
         footerCopyright,
+        projectName,
       }
     },
     computed: {

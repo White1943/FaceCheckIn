@@ -71,279 +71,321 @@ export const asyncRoutes = [
     ],
   }, */
 
+  // {
+  //   path: '/vab',
+  //   component: Layout,
+  //   redirect: 'noRedirect',
+  //   name: 'Vab',
+  //   alwaysShow: true,
+  //   meta: { title: '组件', icon: 'box-open' },
+  //   children: [
+  //     {
+  //       path: 'permissions',
+  //       name: 'Permission',
+  //       component: () => import('@/views/vab/permissions/index'),
+  //       meta: {
+  //         title: '角色权限',
+  //         permissions: ['admin', 'editor'],
+  //       },
+  //     },
+  //     {
+  //       path: 'icon',
+  //       component: EmptyLayout,
+  //       redirect: 'noRedirect',
+  //       name: 'Icon',
+  //       meta: {
+  //         title: '图标',
+  //         permissions: ['admin'],
+  //       },
+  //       children: [
+  //         {
+  //           path: 'awesomeIcon',
+  //           name: 'AwesomeIcon',
+  //           component: () => import('@/views/vab/icon/index'),
+  //           meta: { title: '常规图标' },
+  //         },
+  //         {
+  //           path: 'colorfulIcon',
+  //           name: 'ColorfulIcon',
+  //           component: () => import('@/views/vab/icon/colorfulIcon'),
+  //           meta: { title: '多彩图标' },
+  //         },
+  //       ],
+  //     },
+  //     {
+  //       path: 'table',
+  //       component: () => import('@/views/vab/table/index'),
+  //       name: 'Table',
+  //       meta: {
+  //         title: '表格',
+  //         permissions: ['admin'],
+  //       },
+  //     },
+
+  //     {
+  //       path: 'webSocket',
+  //       name: 'WebSocket',
+  //       component: () => import('@/views/vab/webSocket/index'),
+  //       meta: { title: 'webSocket', permissions: ['admin'] },
+  //     },
+  //     {
+  //       path: 'form',
+  //       name: 'Form',
+  //       component: () => import('@/views/vab/form/index'),
+  //       meta: { title: '表单', permissions: ['admin'] },
+  //     },
+  //     {
+  //       path: 'element',
+  //       name: 'Element',
+  //       component: () => import('@/views/vab/element/index'),
+  //       meta: { title: '常用组件', permissions: ['admin'] },
+  //     },
+  //     {
+  //       path: 'tree',
+  //       name: 'Tree',
+  //       component: () => import('@/views/vab/tree/index'),
+  //       meta: { title: '树', permissions: ['admin'] },
+  //     },
+  //     {
+  //       path: 'menu1',
+  //       component: () => import('@/views/vab/nested/menu1/index'),
+  //       name: 'Menu1',
+  //       alwaysShow: true,
+  //       meta: {
+  //         title: '嵌套路由 1',
+  //         permissions: ['admin'],
+  //       },
+  //       children: [
+  //         {
+  //           path: 'menu1-1',
+  //           name: 'Menu1-1',
+  //           alwaysShow: true,
+  //           meta: { title: '嵌套路由 1-1' },
+  //           component: () => import('@/views/vab/nested/menu1/menu1-1/index'),
+
+  //           children: [
+  //             {
+  //               path: 'menu1-1-1',
+  //               name: 'Menu1-1-1',
+  //               meta: { title: '嵌套路由 1-1-1' },
+  //               component: () => import('@/views/vab/nested/menu1/menu1-1/menu1-1-1/index'),
+  //             },
+  //           ],
+  //         },
+  //       ],
+  //     },
+  //     {
+  //       path: 'loading',
+  //       name: 'Loading',
+  //       component: () => import('@/views/vab/loading/index'),
+  //       meta: { title: 'loading', permissions: ['admin'] },
+  //     },
+  //     {
+  //       path: 'backToTop',
+  //       name: 'BackToTop',
+  //       component: () => import('@/views/vab/backToTop/index'),
+  //       meta: { title: '返回顶部', permissions: ['admin'] },
+  //     },
+  //     {
+  //       path: 'lodash',
+  //       name: 'Lodash',
+  //       component: () => import('@/views/vab/lodash/index'),
+  //       meta: { title: 'lodash', permissions: ['admin'] },
+  //     },
+
+  //     {
+  //       path: 'upload',
+  //       name: 'Upload',
+  //       component: () => import('@/views/vab/upload/index'),
+  //       meta: { title: '上传', permissions: ['admin'] },
+  //     },
+  //     {
+  //       path: 'log',
+  //       name: 'Log',
+  //       component: () => import('@/views/vab/errorLog/index'),
+  //       meta: { title: '错误日志模拟', permissions: ['admin'] },
+  //     },
+  //     {
+  //       path: 'https://github.com/zxwk1998/vue-admin-better/',
+  //       name: 'ExternalLink',
+  //       meta: {
+  //         title: '外链',
+  //         target: '_blank',
+  //         permissions: ['admin', 'editor'],
+  //         badge: 'New',
+  //       },
+  //     },
+  //     {
+  //       path: 'more',
+  //       name: 'More',
+  //       component: () => import('@/views/vab/more/index'),
+  //       meta: { title: '关于', permissions: ['admin'] },
+  //     },
+  //   ],
+  // },
+  // {
+  //   path: '/personnelManagement',
+  //   component: Layout,
+  //   redirect: 'noRedirect',
+  //   name: 'PersonnelManagement',
+  //   meta: { title: '配置', icon: 'users-cog', permissions: ['admin'] },
+  //   children: [
+  //     {
+  //       path: 'userManagement',
+  //       name: 'UserManagement',
+  //       component: () => import('@/views/personnelManagement/userManagement/index'),
+  //       meta: { title: '用户管理' },
+  //     },
+  //     {
+  //       path: 'roleManagement',
+  //       name: 'RoleManagement',
+  //       component: () => import('@/views/personnelManagement/roleManagement/index'),
+  //       meta: { title: '角色管理' },
+  //     },
+  //     {
+  //       path: 'menuManagement',
+  //       name: 'MenuManagement',
+  //       component: () => import('@/views/personnelManagement/menuManagement/index'),
+  //       meta: { title: '菜单管理', badge: 'New' },
+  //     },
+  //   ],
+  // },
+  // {
+  //   path: '/mall',
+  //   component: Layout,
+  //   redirect: 'noRedirect',
+  //   name: 'Mall',
+  //   meta: {
+  //     title: '商城',
+  //     icon: 'shopping-cart',
+  //     permissions: ['admin'],
+  //   },
+
+  //   children: [
+  //     {
+  //       path: 'pay',
+  //       name: 'Pay',
+  //       component: () => import('@/views/mall/pay/index'),
+  //       meta: {
+  //         title: '支付',
+  //         noKeepAlive: true,
+  //       },
+  //       children: null,
+  //     },
+  //     {
+  //       path: 'goodsList',
+  //       name: 'GoodsList',
+  //       component: () => import('@/views/mall/goodsList/index'),
+  //       meta: {
+  //         title: '商品列表',
+  //       },
+  //     },
+  //   ],
+  // },
+  // {
+  //   path: '/error',
+  //   component: EmptyLayout,
+  //   redirect: 'noRedirect',
+  //   name: 'Error',
+  //   meta: { title: '错误页', icon: 'bug' },
+  //   children: [
+  //     {
+  //       path: '401',
+  //       name: 'Error401',
+  //       component: () => import('@/views/401'),
+  //       meta: { title: '401' },
+  //     },
+  //     {
+  //       path: '404',
+  //       name: 'Error404',
+  //       component: () => import('@/views/404'),
+  //       meta: { title: '404' },
+  //     },
+  //   ],
+  // },
   {
-    path: '/vab',
+    path: '/teacher',
     component: Layout,
     redirect: 'noRedirect',
-    name: 'Vab',
-    alwaysShow: true,
-    meta: { title: '组件', icon: 'box-open' },
-    children: [
-      {
-        path: 'permissions',
-        name: 'Permission',
-        component: () => import('@/views/vab/permissions/index'),
-        meta: {
-          title: '角色权限',
-          permissions: ['admin', 'editor'],
-        },
-      },
-      {
-        path: 'icon',
-        component: EmptyLayout,
-        redirect: 'noRedirect',
-        name: 'Icon',
-        meta: {
-          title: '图标',
-          permissions: ['admin'],
-        },
-        children: [
-          {
-            path: 'awesomeIcon',
-            name: 'AwesomeIcon',
-            component: () => import('@/views/vab/icon/index'),
-            meta: { title: '常规图标' },
-          },
-          {
-            path: 'colorfulIcon',
-            name: 'ColorfulIcon',
-            component: () => import('@/views/vab/icon/colorfulIcon'),
-            meta: { title: '多彩图标' },
-          },
-        ],
-      },
-      {
-        path: 'table',
-        component: () => import('@/views/vab/table/index'),
-        name: 'Table',
-        meta: {
-          title: '表格',
-          permissions: ['admin'],
-        },
-      },
-
-      {
-        path: 'webSocket',
-        name: 'WebSocket',
-        component: () => import('@/views/vab/webSocket/index'),
-        meta: { title: 'webSocket', permissions: ['admin'] },
-      },
-      {
-        path: 'form',
-        name: 'Form',
-        component: () => import('@/views/vab/form/index'),
-        meta: { title: '表单', permissions: ['admin'] },
-      },
-      {
-        path: 'element',
-        name: 'Element',
-        component: () => import('@/views/vab/element/index'),
-        meta: { title: '常用组件', permissions: ['admin'] },
-      },
-      {
-        path: 'tree',
-        name: 'Tree',
-        component: () => import('@/views/vab/tree/index'),
-        meta: { title: '树', permissions: ['admin'] },
-      },
-      {
-        path: 'menu1',
-        component: () => import('@/views/vab/nested/menu1/index'),
-        name: 'Menu1',
-        alwaysShow: true,
-        meta: {
-          title: '嵌套路由 1',
-          permissions: ['admin'],
-        },
-        children: [
-          {
-            path: 'menu1-1',
-            name: 'Menu1-1',
-            alwaysShow: true,
-            meta: { title: '嵌套路由 1-1' },
-            component: () => import('@/views/vab/nested/menu1/menu1-1/index'),
-
-            children: [
-              {
-                path: 'menu1-1-1',
-                name: 'Menu1-1-1',
-                meta: { title: '嵌套路由 1-1-1' },
-                component: () => import('@/views/vab/nested/menu1/menu1-1/menu1-1-1/index'),
-              },
-            ],
-          },
-        ],
-      },
-      {
-        path: 'loading',
-        name: 'Loading',
-        component: () => import('@/views/vab/loading/index'),
-        meta: { title: 'loading', permissions: ['admin'] },
-      },
-      {
-        path: 'backToTop',
-        name: 'BackToTop',
-        component: () => import('@/views/vab/backToTop/index'),
-        meta: { title: '返回顶部', permissions: ['admin'] },
-      },
-      {
-        path: 'lodash',
-        name: 'Lodash',
-        component: () => import('@/views/vab/lodash/index'),
-        meta: { title: 'lodash', permissions: ['admin'] },
-      },
-
-      {
-        path: 'upload',
-        name: 'Upload',
-        component: () => import('@/views/vab/upload/index'),
-        meta: { title: '上传', permissions: ['admin'] },
-      },
-      {
-        path: 'log',
-        name: 'Log',
-        component: () => import('@/views/vab/errorLog/index'),
-        meta: { title: '错误日志模拟', permissions: ['admin'] },
-      },
-      {
-        path: 'https://github.com/zxwk1998/vue-admin-better/',
-        name: 'ExternalLink',
-        meta: {
-          title: '外链',
-          target: '_blank',
-          permissions: ['admin', 'editor'],
-          badge: 'New',
-        },
-      },
-      {
-        path: 'more',
-        name: 'More',
-        component: () => import('@/views/vab/more/index'),
-        meta: { title: '关于', permissions: ['admin'] },
-      },
-    ],
-  },
-  {
-    path: '/personnelManagement',
-    component: Layout,
-    redirect: 'noRedirect',
-    name: 'PersonnelManagement',
-    meta: { title: '配置', icon: 'users-cog', permissions: ['admin'] },
-    children: [
-      {
-        path: 'userManagement',
-        name: 'UserManagement',
-        component: () => import('@/views/personnelManagement/userManagement/index'),
-        meta: { title: '用户管理' },
-      },
-      {
-        path: 'roleManagement',
-        name: 'RoleManagement',
-        component: () => import('@/views/personnelManagement/roleManagement/index'),
-        meta: { title: '角色管理' },
-      },
-      {
-        path: 'menuManagement',
-        name: 'MenuManagement',
-        component: () => import('@/views/personnelManagement/menuManagement/index'),
-        meta: { title: '菜单管理', badge: 'New' },
-      },
-    ],
-  },
-  {
-    path: '/mall',
-    component: Layout,
-    redirect: 'noRedirect',
-    name: 'Mall',
-    meta: {
-      title: '商城',
-      icon: 'shopping-cart',
-      permissions: ['admin'],
+    name: 'TeacherManage',
+    meta: { 
+      title: '教师端',
+      icon: 'chalkboard-teacher',
+      permissions: ['admin', 'teacher']  // 管理员和教师可访问
     },
-
     children: [
       {
-        path: 'pay',
-        name: 'Pay',
-        component: () => import('@/views/mall/pay/index'),
-        meta: {
-          title: '支付',
-          noKeepAlive: true,
-        },
-        children: null,
-      },
-      {
-        path: 'goodsList',
-        name: 'GoodsList',
-        component: () => import('@/views/mall/goodsList/index'),
-        meta: {
-          title: '商品列表',
+        path: 'courses',
+        name: 'TeacherCourses',
+        component: () => import('@/views/teacher/courses/index'),
+        meta: { 
+          title: '课程管理',
+          permissions: ['admin', 'teacher']
         },
       },
-    ],
+      {
+        path: 'attendance',
+        name: 'TeacherAttendance',
+        component: () => import('@/views/teacher/attendance/index'),
+        meta: { 
+          title: '考勤管理',
+          permissions: ['admin', 'teacher']
+        },
+      }
+    ]
   },
   {
-    path: '/error',
-    component: EmptyLayout,
-    redirect: 'noRedirect',
-    name: 'Error',
-    meta: { title: '错误页', icon: 'bug' },
-    children: [
-      {
-        path: '401',
-        name: 'Error401',
-        component: () => import('@/views/401'),
-        meta: { title: '401' },
-      },
-      {
-        path: '404',
-        name: 'Error404',
-        component: () => import('@/views/404'),
-        meta: { title: '404' },
-      },
-    ],
-  },
-  {
-    path: '/attendance',
+    path: '/student',
     component: Layout,
     redirect: 'noRedirect',
-    name: 'Attendance',
-    meta: { title: '签到管理', icon: 'check-circle' },
+    name: 'StudentManage',
+    meta: { 
+      title: '学生端',
+      icon: 'user-graduate',
+      permissions: ['admin', 'student']  // 管理员和学生可访问
+    },
     children: [
       {
-        path: 'records',
-        name: 'AttendanceRecords',
-        component: () => import('@/views/attendance/records/index'),
-        meta: { title: '签到记录' },
+        path: 'courses',
+        name: 'StudentCourses',
+        component: () => import('@/views/student/courses/index'),
+        meta: { 
+          title: '我的课程',
+          permissions: ['admin', 'student']
+        },
       },
       {
-        path: 'settings',
-        name: 'AttendanceSettings',
-        component: () => import('@/views/attendance/settings/index'),
-        meta: { title: '签到设置' },
-      },
-      {
-        path: 'statistics',
-        name: 'AttendanceStatistics',
-        component: () => import('@/views/attendance/statistics/index'),
-        meta: { title: '签到统计' },
-      },
-    ],
+        path: 'attendance',
+        name: 'StudentAttendance',
+        component: () => import('@/views/student/attendance/index'),
+        meta: { 
+          title: '我的考勤',
+          permissions: ['admin', 'student']
+        },
+      }
+    ]
   },
   {
-    path: '/students',
+    path: '/admin',
     component: Layout,
     redirect: 'noRedirect',
-    name: 'Students',
-    meta: { title: '学生管理', icon: 'user' },
+    name: 'AdminManage',
+    meta: { 
+      title: '系统管理',
+      icon: 'cog',
+      permissions: ['admin']  // 只有管理员可访问
+    },
     children: [
       {
-        path: 'list',
-        name: 'StudentList',
-        component: () => import('@/views/students/list/index'),
-        meta: { title: '学生列表' },
-      },
-    ],
+        path: 'users',
+        name: 'UserManagement',
+        component: () => import('@/views/admin/users/index'),
+        meta: { 
+          title: '用户管理',
+          permissions: ['admin']
+        },
+      }
+    ]
   },
   {
     path: '*',

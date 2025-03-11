@@ -9,8 +9,8 @@ class Course(db.Model):
     teacher_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
     semester = db.Column(db.String(20), nullable=False)
     description = db.Column(db.Text)
-    start_time = db.Column(db.Time)
-    end_time = db.Column(db.Time)
+    start_time = db.Column(db.Time, nullable=False)
+    end_time = db.Column(db.Time, nullable=False)
 
     location = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -21,8 +21,7 @@ class Course(db.Model):
         'User',
         secondary='course_students',
         back_populates='enrolled_courses',
-        lazy='dynamic',
-        overlaps="student,course"
+        lazy='dynamic'
     )
 
     @staticmethod

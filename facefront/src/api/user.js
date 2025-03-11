@@ -1,38 +1,36 @@
 import request from '@/utils/request'
 import { encryptedData } from '@/utils/encrypt'
-import { loginRSA, tokenName } from '@/config'
+import { loginRSA } from '@/config'
 
 export async function login(data) {
   if (loginRSA) {
     data = await encryptedData(data)
   }
   return request({
-    url: '/login',
+    url: '/api/auth/login',
     method: 'post',
     data,
   })
 }
 
-export function getUserInfo(accessToken) {
+export function register(data) {
   return request({
-    url: '/userInfo',
+    url: '/api/auth/register',
     method: 'post',
-    data: {
-      [tokenName]: accessToken,
-    },
+    data,
+  })
+}
+
+export function getUserInfo() {
+  return request({
+    url: '/api/auth/profile',
+    method: 'get',
   })
 }
 
 export function logout() {
   return request({
-    url: '/logout',
-    method: 'post',
-  })
-}
-
-export function register() {
-  return request({
-    url: '/register',
+    url: '/api/auth/logout',
     method: 'post',
   })
 }

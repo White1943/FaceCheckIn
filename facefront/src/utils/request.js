@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import axios from 'axios'
+import { getAccessToken } from '@/utils/accessToken'
 import {
   baseURL,
   contentType,
@@ -52,11 +53,16 @@ const instance = axios.create({
 
 instance.interceptors.request.use(
   (config) => {
-    if (store.getters['user/accessToken']) {
-      config.headers[tokenName] = store.getters['user/accessToken']
+    const token = getAccessToken()
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`
     }
-    //这里会过滤所有为空、0、false的key，如果不需要请自行注释
-    if (config.data) config.data = Vue.prototype.$baseLodash.pickBy(config.data, Vue.prototype.$baseLodash.identity)
+    
+    // 移除加密相关代码，直接发送原始数据
+    if (config.data) {
+      config.data = Vue.prototype.$baseLodash.pickBy(config.data, Vue.prototype.$baseLodash.identity)
+    }
+    
     if (config.data && config.headers['Content-Type'] === 'application/x-www-form-urlencoded;charset=UTF-8')
       config.data = qs.stringify(config.data)
     if (debounce.some((item) => config.url.includes(item))) loadingInstance = Vue.prototype.$baseLoading()
@@ -72,30 +78,31 @@ instance.interceptors.response.use(
     if (loadingInstance) loadingInstance.close()
 
     const { data, config } = response
-    const { code, msg } = data
+    const { code, message, data: responseData } = data
+
     // 操作正常Code数组
     const codeVerificationArray = isArray(successCode) ? [...successCode] : [...[successCode]]
+    
     // 是否操作正常
     if (codeVerificationArray.includes(code)) {
       return data
     } else {
-      handleCode(code, msg)
+      Vue.prototype.$baseMessage(message || `请求失败`, 'error')
       return Promise.reject(
-        `vue-admin-beautiful请求异常拦截:${JSON.stringify({
+        `请求失败:${JSON.stringify({
           url: config.url,
           code,
-          msg,
+          message,
         })}` || 'Error'
       )
     }
   },
   (error) => {
     if (loadingInstance) loadingInstance.close()
-    const { response, message } = error
+    
     if (error.response && error.response.data) {
-      const { status, data } = response
-      handleCode(status, data.msg || message)
-      return Promise.reject(error)
+      const { message } = error.response.data
+      Vue.prototype.$baseMessage(message || '请求失败', 'error')
     } else {
       let { message } = error
       if (message === 'Network Error') {
@@ -105,12 +112,11 @@ instance.interceptors.response.use(
         message = '后端接口请求超时'
       }
       if (message.includes('Request failed with status code')) {
-        const code = message.substr(message.length - 3)
-        message = `后端接口${code}异常`
+        message = '请求失败'
       }
       Vue.prototype.$baseMessage(message || `后端接口未知异常`, 'error')
-      return Promise.reject(error)
     }
+    return Promise.reject(error)
   }
 )
 

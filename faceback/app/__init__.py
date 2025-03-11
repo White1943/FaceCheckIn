@@ -28,13 +28,18 @@ def create_app(config_class=Config):
 
 
         # 注册蓝图
-    from  .auth import auth_bp
-    from  .routes import  face_bp
+    from .auth import auth_bp
+    from .routes import face_bp
     from .courses import course_bp
+    from app.attendance import teacher_attendance_bp
+    from app.student import student_course_bp, student_attendance_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(face_bp, url_prefix='/api/face')
     app.register_blueprint(course_bp, url_prefix='/api/course')
+    app.register_blueprint(teacher_attendance_bp, url_prefix='/api/teacher/attendance')
+    app.register_blueprint(student_course_bp, url_prefix='/api/stu/course')
+    app.register_blueprint(student_attendance_bp, url_prefix='/api/stu/attendance')
 
 
 

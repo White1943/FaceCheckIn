@@ -1,12 +1,12 @@
 <template>
   <div class="login-container">
     <el-row>
-      <el-col :lg="16" :md="12" :sm="24" :xl="16" :xs="24">
+      <el-col :xs="24" :sm="24" :md="12" :lg="16" :xl="16">
         <div style="color: transparent">占位符</div>
       </el-col>
-      <el-col :lg="8" :md="12" :sm="24" :xl="8" :xs="24">
-        <el-form ref="form" class="login-form" label-position="left" :model="form" :rules="rules">
-          <div class="title">hello !</div>
+      <el-col :xs="24" :sm="24" :md="12" :lg="8" :xl="8">
+        <el-form ref="form" :model="form" :rules="rules" class="login-form">
+          <h2 class="login-title">签到系统</h2>
           <div class="title-tips">欢迎来到{{ title }}！</div>
           <el-form-item prop="username" style="margin-top: 40px">
             <span class="svg-container svg-container-admin">

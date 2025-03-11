@@ -13,15 +13,16 @@ const setting = {
   // 进行编译的依赖
   transpileDependencies: [],
   //标题 （包括初次加载雪花屏的标题 页面的标题 浏览器的标题）
-  title: 'Admin Better',
+  title: '签到系统',
   //简写
   abbreviation: 'vab',
   //开发环境端口号
-  devPort: '81',
+  devPort: '8085',
   //版本号
   version: process.env.VUE_APP_VERSION,
   //这一项非常重要！请务必保留MIT协议下package.json及copyright作者信息 即可免费商用，不遵守此项约定你将无法使用该框架，如需自定义版权信息请联系QQ1204505056
   copyright: 'vab',
+  projectName: '签到系统',
   //是否显示页面底部自定义版权信息
   footerCopyright: true,
   //是否显示顶部进度条
@@ -63,7 +64,7 @@ const setting = {
   //代码生成机生成在view下的文件夹名称
   templateFolder: 'project',
   //是否显示终端donation打印
-  donation: true,
+  donation: false,
   //是否开启图片压缩
   imageCompression: true,
 }

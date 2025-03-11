@@ -8,13 +8,16 @@ import { getUserInfo, login, logout } from '@/api/user'
 import { getAccessToken, removeAccessToken, setAccessToken } from '@/utils/accessToken'
 import { resetRouter } from '@/router'
 import { title, tokenName } from '@/config'
+import { defaultAvatar } from '@/config/settings'
 
-const state = () => ({
+// const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+
+const state = {
   accessToken: getAccessToken(),
   username: '',
-  avatar: '',
-  permissions: [],
-})
+  avatar: defaultAvatar,
+  permissions: [], // 用户权限
+}
 const getters = {
   accessToken: (state) => state.accessToken,
   username: (state) => state.username,
@@ -42,32 +45,33 @@ const actions = {
   },
   async login({ commit }, userInfo) {
     const { data } = await login(userInfo)
-    const accessToken = data[tokenName]
-    if (accessToken) {
-      commit('setAccessToken', accessToken)
-      const hour = new Date().getHours()
-      const thisTime = hour < 8 ? '早上好' : hour <= 11 ? '上午好' : hour <= 13 ? '中午好' : hour < 18 ? '下午好' : '晚上好'
-      Vue.prototype.$baseNotify(`欢迎登录${title}`, `${thisTime}！`)
-    } else {
-      Vue.prototype.$baseMessage(`登录接口异常，未正确返回${tokenName}...`, 'error')
-    }
+    const accessToken = data.token  // 这里期望后端返回 { token: 'xxx' }
+    commit('setAccessToken', accessToken)
+    setAccessToken(accessToken)
   },
-  async getUserInfo({ commit, state }) {
-    const { data } = await getUserInfo(state.accessToken)
-    if (!data) {
-      Vue.prototype.$baseMessage('验证失败，请重新登录...', 'error')
-      return false
+  async getUserInfo({ commit }) {
+    const { data } = await getUserInfo()
+    let permissions = ['student'] 
+    
+    switch (data.role) {
+      case '教师':
+        permissions = ['teacher']
+        break
+      case '管理员':
+        permissions = ['admin']
+        break
+      case '学生':
+        permissions = ['student']
+        break
+      default:
+        permissions = ['student']
     }
-    let { permissions, username, avatar } = data
-    if (permissions && username && Array.isArray(permissions)) {
-      commit('setPermissions', permissions)
-      commit('setUsername', username)
-      commit('setAvatar', avatar)
-      return permissions
-    } else {
-      Vue.prototype.$baseMessage('用户信息接口异常', 'error')
-      return false
-    }
+    
+    commit('setPermissions', permissions)
+    commit('setUsername', data.username)
+    commit('setAvatar', data.avatar )
+    
+    return permissions
   },
   async logout({ dispatch }) {
     await logout(state.accessToken)
