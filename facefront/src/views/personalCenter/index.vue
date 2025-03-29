@@ -181,10 +181,12 @@ export default {
             email: res.data.email,
             avatar: res.data.avatar
           }
-          // 不再需要附加BASE_API，服务器应该返回完整路径
-          // if (this.userInfo.avatar && !this.userInfo.avatar.startsWith('http')) {
-          //   this.userInfo.avatar = process.env.VUE_APP_BASE_API + this.userInfo.avatar
-          // }
+          
+          // 为头像URL添加baseURL前缀，确保图片能正确显示
+          if (this.userInfo.avatar && !this.userInfo.avatar.startsWith('http')) {
+            const baseURL = 'http://localhost:5001'; // 使用配置中的URL
+            this.userInfo.avatar = baseURL + this.userInfo.avatar;
+          }
         }
       } catch (error) {
         console.error('获取用户信息失败:', error)
@@ -278,19 +280,19 @@ export default {
         console.log(pair[0], pair[1]);
       }
       
-      // 直接使用相对路径，不依赖环境变量
-      const url = '/api/personal/avatar';
+      // 关键修改：使用网络配置中定义的baseURL
+      const baseURL = 'http://localhost:5001'; // 直接使用配置文件中的URL
+      const url = `${baseURL}/api/personal/avatar`;
       
       axios.post(url, this.fileParam, {
         headers: {
           'Authorization': `Bearer ${getAccessToken()}`,
-          // 不要手动设置Content-Type
         }
       }).then(response => {
         if (response.data.code === 200) {
           this.$message.success('头像上传成功');
-          // 更新头像URL - 使用服务器返回的完整路径
-          this.userInfo.avatar = response.data.data.avatar;
+          // 更新头像URL - 添加baseURL前缀
+          this.userInfo.avatar = baseURL + response.data.data.avatar;
           // 更新Vuex中的头像
           this.$store.commit('user/setAvatar', this.userInfo.avatar);
           // 清空文件列表
