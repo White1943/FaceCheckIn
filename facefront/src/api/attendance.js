@@ -57,8 +57,11 @@ export function getAttendanceHistory() {
 // 提交签到
 export function submitAttendance(data) {
   return request({
-    url: '/api/stu/attendance/checkin',
+    url: '/api/stu/course/attendance/sign',
     method: 'post',
-    data
+    data,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
   })
 }
