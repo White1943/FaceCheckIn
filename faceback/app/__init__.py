@@ -33,6 +33,7 @@ def create_app(config_class=Config):
     from .courses import course_bp
     from app.attendance import teacher_attendance_bp
     from app.student import student_course_bp, student_attendance_bp
+    from app.personal import personal_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(face_bp, url_prefix='/api/face')
@@ -40,7 +41,7 @@ def create_app(config_class=Config):
     app.register_blueprint(teacher_attendance_bp, url_prefix='/api/teacher/attendance')
     app.register_blueprint(student_course_bp, url_prefix='/api/stu/course')
     app.register_blueprint(student_attendance_bp, url_prefix='/api/stu/attendance')
-
+    app.register_blueprint(personal_bp, url_prefix='/api/personal')
 
 
     return app

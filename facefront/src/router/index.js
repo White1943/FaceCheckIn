@@ -318,7 +318,7 @@ export const asyncRoutes = [
         path: 'courses',
         name: 'TeacherCourses',
         component: () => import('@/views/teacher/courses/index'),
-        meta: { 
+        meta: {
           title: '课程管理',
           permissions: ['admin', 'teacher']
         },
@@ -327,7 +327,7 @@ export const asyncRoutes = [
         path: 'attendance',
         name: 'TeacherAttendance',
         component: () => import('@/views/teacher/attendance/index'),
-        meta: { 
+        meta: {
           title: '考勤管理',
           permissions: ['admin', 'teacher']
         },
@@ -339,7 +339,7 @@ export const asyncRoutes = [
     component: Layout,
     redirect: 'noRedirect',
     name: 'StudentManage',
-    meta: { 
+    meta: {
       title: '学生端',
       icon: 'user-graduate',
       permissions: ['admin', 'student']  // 管理员和学生可访问
@@ -349,7 +349,7 @@ export const asyncRoutes = [
         path: 'courses',
         name: 'StudentCourses',
         component: () => import('@/views/student/courses/index'),
-        meta: { 
+        meta: {
           title: '我的课程',
           permissions: ['admin', 'student']
         },
@@ -358,7 +358,7 @@ export const asyncRoutes = [
         path: 'attendance',
         name: 'StudentAttendance',
         component: () => import('@/views/student/attendance/index'),
-        meta: { 
+        meta: {
           title: '我的考勤',
           permissions: ['admin', 'student']
         },
@@ -383,6 +383,28 @@ export const asyncRoutes = [
         meta: { 
           title: '用户管理',
           permissions: ['admin']
+        },
+      }
+    ]
+  },
+  {
+    path: '/personalCenter',
+    component: Layout,
+    redirect: 'noRedirect',
+    name: 'PersonalCenter',
+    meta: { 
+      title: '个人中心',
+      icon: 'user',
+      permissions: ['admin', 'teacher', 'student']  // 所有角色都可访问
+    },
+    children: [
+      {
+        path: 'index',
+        name: 'PersonalCenterIndex',
+        component: () => import('@/views/personalCenter/index'),
+        meta: { 
+          title: '个人信息',
+          permissions: ['admin', 'teacher', 'student']
         },
       }
     ]
