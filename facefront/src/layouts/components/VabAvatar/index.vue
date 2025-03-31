@@ -2,7 +2,7 @@
   <el-dropdown @command="handleCommand">
     <span class="avatar-dropdown">
       <!--<el-avatar class="user-avatar" :src="avatar"></el-avatar>-->
-      <img :src="avatar" alt="" class="user-avatar" />
+      <img :src="avatarSrc" alt="" class="user-avatar" />
       <div class="user-name">
         {{ username }}
         <i class="el-icon-arrow-down el-icon--right"></i>
@@ -27,6 +27,15 @@
         avatar: 'user/avatar',
         username: 'user/username',
       }),
+      avatarSrc() {
+        if (this.avatar && (this.avatar.startsWith('http') || this.avatar.startsWith('data:'))) {
+          return this.avatar;
+        }
+        else if (this.avatar && this.avatar.startsWith('/')) {
+          return `http://localhost:5001${this.avatar}`;
+        }
+        return this.avatar || '/avatar2.jpg';
+      }
     },
     methods: {
       handleCommand(command) {

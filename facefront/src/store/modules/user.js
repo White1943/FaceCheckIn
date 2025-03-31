@@ -10,12 +10,16 @@ import { resetRouter } from '@/router'
 import { title, tokenName } from '@/config'
 import { defaultAvatar } from '@/config/settings'
 
-// const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+// 保存用户头像信息的键
+const USER_AVATAR_KEY = 'user_avatar'
+
+// 后端API基础URL
+const API_BASE_URL = 'http://localhost:5001'
 
 const state = {
   accessToken: getAccessToken(),
   username: '',
-  avatar: defaultAvatar,
+  avatar: localStorage.getItem(USER_AVATAR_KEY) || defaultAvatar,
   permissions: [], // 用户权限
 }
 const getters = {
@@ -33,7 +37,17 @@ const mutations = {
     state.username = username
   },
   setAvatar(state, avatar) {
-    state.avatar = avatar
+    // 处理头像路径
+    if (avatar && !avatar.startsWith('http') && !avatar.startsWith('data:')) {
+      // 构建完整的头像URL
+      const fullAvatarUrl = `${API_BASE_URL}${avatar}`
+      state.avatar = fullAvatarUrl
+      // 保存到localStorage，以便页面刷新后恢复
+      localStorage.setItem(USER_AVATAR_KEY, fullAvatarUrl)
+    } else {
+      state.avatar = avatar || defaultAvatar
+      localStorage.setItem(USER_AVATAR_KEY, avatar || defaultAvatar)
+    }
   },
   setPermissions(state, permissions) {
     state.permissions = permissions
@@ -69,7 +83,7 @@ const actions = {
     
     commit('setPermissions', permissions)
     commit('setUsername', data.username)
-    commit('setAvatar', data.avatar )
+    commit('setAvatar', data.avatar)
     
     return permissions
   },
@@ -77,11 +91,15 @@ const actions = {
     await logout(state.accessToken)
     await dispatch('resetAccessToken')
     await resetRouter()
+    // 清除头像缓存
+    localStorage.removeItem(USER_AVATAR_KEY)
   },
   resetAccessToken({ commit }) {
     commit('setPermissions', [])
     commit('setAccessToken', '')
     removeAccessToken()
+    // 清除头像缓存
+    localStorage.removeItem(USER_AVATAR_KEY)
   },
 }
 export default { state, getters, mutations, actions }

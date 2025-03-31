@@ -226,7 +226,8 @@ export default {
         const blob = this.dataURItoBlob(this.capturedImage);
         formData.append('face_image', blob, 'face.jpg');
         formData.append('task_id', this.selectedTask.taskId);
-        
+        console.log(`${this.selectedTask.taskId}任务id`);
+       
         // 获取地理位置（如果需要）
         let location = { latitude: 0, longitude: 0 };
         try {
@@ -242,22 +243,30 @@ export default {
         formData.append('location_lat', location.latitude);
         formData.append('location_lng', location.longitude);
         
-        // 发送签到请求
-        const response = await submitAttendance(formData);
+        // 发送签到请求 - 直接使用axios而不是封装的函数来测试
+        const response = await axios({
+          method: 'post',
+          url: 'http://localhost:5001/api/stu/attendance/sign',    
+          data: formData,
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${getAccessToken()}`
+          }
+        });
         
-        if (response.code === 200) {
-          this.$message.success(response.message || '签到成功');
+        if (response.data.code === 200) {
+          this.$message.success(response.data.message || '签到成功');
           this.cameraDialogVisible = false;
           this.capturedImage = null;
           this.selectedTask = null;
           // 刷新签到记录
           this.fetchData();
         } else {
-          this.$message.error(response.message || '签到失败');
+          this.$message.error(response.data.message || '签到失败');
         }
       } catch (error) {
         console.error('签到错误:', error);
-        this.$message.error('签到失败: ' + (error.response?.data?.message || error.message || '未知错误'));
+        this.$message.error(`签到失败: ${  error.response?.data?.message || error.message || '未知错误'}`);
       } finally {
         this.recognizing = false;
       }

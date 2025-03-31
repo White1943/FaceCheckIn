@@ -306,7 +306,7 @@ export default {
         if (error.response) {
           console.error('响应数据:', error.response.data);
         }
-        this.$message.error('上传失败: ' + (error.message || '未知错误'));
+        this.$message.error(`上传失败: ${  error.message || '未知错误'}`);
       }).finally(() => {
         loading.close();
       });

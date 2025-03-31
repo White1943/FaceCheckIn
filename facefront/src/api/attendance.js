@@ -54,10 +54,16 @@ export function getAttendanceHistory() {
   })
 }
 
-// 提交签到
+// 提交签到  人脸
 export function submitAttendance(data) {
+  // 确保data是一个FormData对象
+  if (!(data instanceof FormData)) {
+    console.error('submitAttendance期望接收FormData对象');
+    return Promise.reject(new Error('无效的数据格式'));
+  }
+
   return request({
-    url: '/api/stu/course/attendance/sign',
+    url: '/api/stu/attendance/sign',
     method: 'post',
     data,
     headers: {

@@ -300,7 +300,7 @@ def sign_attendance():
 def get_active_attendance_tasks():
     """获取当前可签到的任务"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())
         current_time = time.time()
         
         # 获取学生的课程
