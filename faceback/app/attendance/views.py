@@ -153,27 +153,65 @@ def get_task_records(task_id):
 
         # 验证权限
         if task.teacher_id != user_id:
-            return Result.error("无权查看此签到记录", code=403)
+            return Result.error("无权查看此签到任务详情", code=403)
 
-        records = task.records
+        # 获取任务信息
+        course = Course.query.get(task.course_id)
+        task_info = {
+            'taskId': task.task_id,
+            'courseName': course.course_name,
+            'startTime': task.start_time.strftime('%Y-%m-%d %H:%M'),
+            'endTime': task.end_time.strftime('%Y-%m-%d %H:%M'),
+            'status': task.status
+        }
+
+        # 获取课程所有学生
+        students = course.students.all()
+        
+        # 获取已签到记录
+        records = AttendanceRecord.query.filter_by(task_id=task_id).all()
+        
+        # 记录字典，便于后续查找
+        record_dict = {record.student_id: record for record in records}
+        
+        result_records = []
+        for student in students:
+            if student.user_id in record_dict:
+                record = record_dict[student.user_id]
+                status = record.status
+                check_in_time = record.check_in_time.strftime('%Y-%m-%d %H:%M:%S')
+                
+                # 处理照片路径 - 修改为相对路径
+                face_image_url = None
+                if record.face_image:
+                    face_image_url = f'/uploads/attendance/{record.face_image}'
+                
+                result_records.append({
+                    'recordId': record.id,
+                    'studentId': student.user_id,
+                    'studentName': student.real_name,
+                    'status': status,
+                    'checkInTime': check_in_time,
+                    'faceImage': face_image_url  # URL路径形式
+                })
+            else:
+                # 未签到的学生
+                result_records.append({
+                    'studentId': student.user_id,
+                    'studentName': student.real_name,
+                    'status': '缺课',
+                    'checkInTime': None,
+                    'faceImage': None
+                })
+                
         return Result.success(data={
-            'taskInfo': {
-                'courseName': task.course.course_name,
-                'startTime': task.start_time.strftime('%Y-%m-%d %H:%M'),
-                'endTime': task.end_time.strftime('%Y-%m-%d %H:%M'),
-                'status': task.status
-            },
-            'records': [{
-                'studentId': record.student.user_id,
-                'studentName': record.student.real_name,
-                'checkInTime': record.check_in_time.strftime('%Y-%m-%d %H:%M:%S'),
-                'status': record.status
-            } for record in records]
+            'taskInfo': task_info,
+            'records': result_records
         })
 
     except Exception as e:
         print(f"Get task records error: {str(e)}")
-        return Result.error("获取签到记录失败")
+        return Result.error("获取签到详情失败")
 
 @teacher_attendance_bp.route('/sign', methods=['POST'])
 @jwt_required()
@@ -391,3 +429,27 @@ def get_attendance_history():
     except Exception as e:
         print(f"获取签到历史失败: {str(e)}")
         return Result.error(message=f'获取签到历史失败: {str(e)}', code=500)
+
+@teacher_attendance_bp.route('/records/<int:record_id>/face', methods=['GET'])
+@jwt_required()
+def get_student_face_image(record_id):
+    try:
+        user_id = int(get_jwt_identity())
+        record = AttendanceRecord.query.get_or_404(record_id)
+        
+        # 验证教师权限
+        task = AttendanceTask.query.get(record.task_id)
+        if task.teacher_id != user_id:
+            return Result.error("无权查看此照片", code=403)
+            
+        if not record.face_image:
+            return Result.error("该记录没有人脸照片", code=404)
+            
+        # 返回照片的完整URL
+        image_url = f'/uploads/attendance/{record.face_image}'
+        
+        return Result.success(data={'imageUrl': image_url})
+        
+    except Exception as e:
+        print(f"Get face image error: {str(e)}")
+        return Result.error("获取照片失败")

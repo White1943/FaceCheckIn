@@ -71,3 +71,11 @@ export function submitAttendance(data) {
     }
   })
 }
+
+// //  进行查看签到的图片
+// export function getStudentFaceImage(recordId) {
+//   return request({
+//     url: `/api/teacher/attendance/records/${recordId}/face`,
+//     method: 'get'
+//   })
+// }

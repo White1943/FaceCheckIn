@@ -110,14 +110,35 @@
               </el-tag>
             </template>
           </el-table-column>
+          <el-table-column label="操作">
+            <template #default="scope">
+              <el-button 
+                type="text" 
+                @click="viewStudentPhoto(scope.row)"
+                :disabled="!scope.row.faceImage"
+              >
+                查看照片
+              </el-button>
+            </template>
+          </el-table-column>
         </el-table>
+      </div>
+    </el-dialog>
+
+    <!-- 查看照片对话框 -->
+    <el-dialog title="签到照片" :visible.sync="photoVisible" width="500px">
+      <div class="photo-container" v-if="currentPhoto">
+        <img :src="currentPhoto" alt="签到照片" style="width: 100%;">
+      </div>
+      <div v-else class="no-photo">
+        <el-empty description="无签到照片"></el-empty>
       </div>
     </el-dialog>
   </div>
 </template>
 
 <script>
-import { getTeacherCourses, createAttendanceTask, getAttendanceTasks, endAttendanceTask, getTaskRecords } from '@/api/attendance'
+import { getTeacherCourses, createAttendanceTask, getAttendanceTasks, endAttendanceTask, getTaskRecords  } from '@/api/attendance'
 
 export default {
   name: 'TeacherAttendance',
@@ -139,7 +160,10 @@ export default {
         timeRange: [{ required: true, message: '请选择时间范围', trigger: 'change' }]
       },
       detailsVisible: false,
-      currentTaskDetails: null
+      currentTaskDetails: null,
+      photoVisible: false,   // 照片查看对话框显示状态
+      currentPhoto: null,    // 当前查看的照片URL
+      apiBaseUrl: 'http://localhost:5001'  // 后端API基础URL
     }
   },
   created() {
@@ -242,6 +266,24 @@ export default {
         }
       }
     },
+    // 查看学生签到照片
+    async viewStudentPhoto(record) {
+      if (!record.faceImage) {
+        this.$message.warning('该学生没有上传签到照片');
+        return;
+      }
+      
+      try {
+        // 完整URL构建
+        const imageUrl = `http://localhost:5001${record.faceImage}`;
+        console.log('加载照片URL:', imageUrl); // 调试输出
+        this.currentPhoto = imageUrl;
+        this.photoVisible = true;
+      } catch (error) {
+        this.$message.error('获取照片失败');
+        console.error(error);
+      }
+    },
     // 查看签到详情
     async viewDetails(task) {
       try {
@@ -279,5 +321,23 @@ export default {
   .filter-container {
     margin-bottom: 20px;
   }
+}
+
+.face-photo {
+  width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+}
+
+.photo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.no-photo {
+  text-align: center;
+  padding: 20px;
+  color: #909399;
 }
 </style> 

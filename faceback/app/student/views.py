@@ -274,22 +274,22 @@ def submit_attendance():
 @student_attendance_bp.route('/sign', methods=['POST', 'OPTIONS'])
 @jwt_required()
 def submit_attendance_record():
- 
+
     if request.method == 'OPTIONS':
         return Result.success()
 
     try:
         user_id = int(get_jwt_identity())
-        
+
         # 打印请求头和内容类型
         print("请求头:", request.headers)
         print("请求内容类型:", request.content_type)
         print("请求数据:", request.data)
         print("Form data:", dict(request.form))
         print("Files:", request.files)
-        
+
         task_id = None
-        
+
         # 尝试从不同来源获取task_id
         if request.is_json:
             json_data = request.get_json()
@@ -301,7 +301,7 @@ def submit_attendance_record():
         elif request.form:
             task_id = request.form.get('task_id') or request.form.get('taskId')
         elif request.data:
-         
+
             try:
                 import json
                 data = json.loads(request.data)
@@ -309,15 +309,15 @@ def submit_attendance_record():
                 print("手动解析JSON:", data)
             except:
                 pass
-                
+
         print(f"找到的task_id: {task_id}")
-        
+
         if not task_id:
             return Result.error("缺少签到任务ID，请检查请求格式")
-            
+
         task_id = int(task_id)
         print(f"处理的task_id: {task_id}")
-        
+
         # 获取用户和签到任务信息
         user = User.query.get_or_404(user_id)
 
@@ -344,13 +344,14 @@ def submit_attendance_record():
         if not face_image_file or face_image_file.filename == '':
             return Result.error("人脸图像无效")
 
-        # 保存上传的图像
+        # 保存上传的图像  位于 uploads/attendance
         upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'attendance')
         print(f"上传签到图像文件夹位于: {upload_folder}")
         os.makedirs(upload_folder, exist_ok=True)
         filename = f"{user_id}_{task_id}_{int(datetime.now().timestamp())}.jpg"
         image_path = os.path.join(upload_folder, filename)
         face_image_file.save(image_path)
+        print("加载已有图片： ",image_path)
 
         # 人脸识别逻辑
         try:
