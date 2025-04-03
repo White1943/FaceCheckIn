@@ -331,6 +331,15 @@ export const asyncRoutes = [
           title: '考勤管理',
           permissions: ['admin', 'teacher']
         },
+      },
+      {
+        path: 'appeals',
+        name: 'TeacherAppeals',
+        component: () => import('@/views/teacher/attendance/appeals'),
+        meta: {
+          title: '申诉管理',
+          permissions: ['admin', 'teacher']
+        },
       }
     ]
   },
@@ -360,6 +369,15 @@ export const asyncRoutes = [
         component: () => import('@/views/student/attendance/index'),
         meta: {
           title: '我的考勤',
+          permissions: ['admin', 'student']
+        },
+      },
+      {
+        path: 'appeals',
+        name: 'StudentAppeals',
+        component: () => import('@/views/student/attendance/appeals'),
+        meta: {
+          title: '申诉管理',
           permissions: ['admin', 'student']
         },
       }

@@ -87,11 +87,33 @@
         </div>
       </div>
     </el-dialog>
+
+    
+    <!-- 申诉对话框 -->
+    <el-dialog 
+      title="提交签到申诉" 
+      :visible.sync="appealDialogVisible" 
+      width="500px">
+      <el-form :model="appealForm" ref="appealForm" :rules="appealRules" label-width="80px">
+        <el-form-item label="申诉理由" prop="reason">
+          <el-input 
+            type="textarea" 
+            v-model="appealForm.reason" 
+            :rows="6"
+            placeholder="请详细说明签到异常的原因，如光线不足、网络问题等"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer">
+        <el-button @click="appealDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitAppeal">提交申诉</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import { getActiveAttendanceTasks, getAttendanceHistory, submitAttendance } from '@/api/attendance'
+import { getActiveAttendanceTasks, getAttendanceHistory, submitAttendance, submitAppeal } from '@/api/attendance'
 import axios from 'axios'
 import { getAccessToken } from '@/utils/accessToken'
 
@@ -107,7 +129,18 @@ export default {
       stream: null,
       capturedImage: null,
       selectedTask: null,
-      recognizing: false
+      recognizing: false,
+      appealDialogVisible: false,
+      appealForm: {
+        recordId: null,
+        reason: ''
+      },
+      appealRules: {
+        reason: [
+          { required: true, message: '请输入申诉理由', trigger: 'blur' },
+          { min: 10, message: '申诉理由至少10个字符', trigger: 'blur' }
+        ]
+      }
     }
   },
   created() {
@@ -159,21 +192,24 @@ export default {
     // 启动摄像头
     async startCamera() {
       try {
-        this.stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            width: { ideal: 640 },
-            height: { ideal: 480 },
-            facingMode: "user"
-          } 
+        if (this.stream) {
+          // 关闭已存在的流
+          this.stopCamera();
+        }
+        
+        // 获取新的流
+        this.stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' },
+          audio: false
         });
         
+        // 确保视频元素存在后再设置
         if (this.$refs.video) {
           this.$refs.video.srcObject = this.stream;
         }
       } catch (error) {
         console.error('无法访问摄像头:', error);
-        this.$message.error('无法访问摄像头，请确保已授予摄像头权限');
-        this.cameraDialogVisible = false;
+        this.$message.error('无法访问摄像头，请检查摄像头权限');
       }
     },
     
@@ -207,46 +243,54 @@ export default {
     // 重新拍照
     retakePhoto() {
       this.capturedImage = null;
-      this.imageBlob = null;
+      // 关键修复：确保在显示摄像头前已经获取到视频流
+      this.$nextTick(() => {
+        // 如果流已关闭，重新获取
+        if (!this.stream || this.stream.active === false) {
+          this.startCamera();
+        } else {
+          // 确保视频元素正确绑定到现有流
+          this.$refs.video.srcObject = this.stream;
+        }
+      });
     },
     
     // 提交签到
     async submitAttendance() {
-      if (!this.capturedImage) {
-        this.$message.error('请先拍照');
-        return;
-      }
-      
+      this.recognizing = true;
       try {
-        // 显示识别中状态
-        this.recognizing = true;
+        console.log('任务ID:', this.selectedTask.taskId);
         
-        // 准备表单数据
+        // 创建一个新的FormData对象
         const formData = new FormData();
-        const blob = this.dataURItoBlob(this.capturedImage);
-        formData.append('face_image', blob, 'face.jpg');
+        
+        // 添加数据到FormData
         formData.append('task_id', this.selectedTask.taskId);
-        console.log(`${this.selectedTask.taskId}任务id`);
-       
-        // 获取地理位置（如果需要）
-        let location = { latitude: 0, longitude: 0 };
-        try {
-          const position = await this.getCurrentPosition();
-          location = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          };
-        } catch (e) {
-          console.warn('无法获取位置信息:', e);
+        // 只有当位置信息可用时才添加
+        if (this.currentLocation && this.currentLocation.latitude) {
+          formData.append('location_lat', this.currentLocation.latitude);
+          formData.append('location_lng', this.currentLocation.longitude);
         }
         
-        formData.append('location_lat', location.latitude);
-        formData.append('location_lng', location.longitude);
+        // 添加图像
+        if (this.imageBlob) {
+          formData.append('face_image', this.imageBlob, 'face.jpg');
+        } else {
+          this.$message.error('未能获取照片');
+          this.recognizing = false;
+          return;
+        }
         
-        // 发送签到请求 - 直接使用axios而不是封装的函数来测试
+        // 打印调试信息 - 不要直接打印FormData对象，而是打印每个字段
+        console.log('表单数据:');
+        for (let [key, value] of formData.entries()) {
+          console.log(`${key}: ${value instanceof Blob ? 'Blob数据' : value}`);
+        }
+        
+        // 尝试直接使用axios发送请求，跳过封装的API
         const response = await axios({
           method: 'post',
-          url: 'http://localhost:5001/api/stu/attendance/sign',    
+          url: 'http://localhost:5001/api/stu/attendance/sign',
           data: formData,
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -254,11 +298,16 @@ export default {
           }
         });
         
+        // 处理响应
         if (response.data.code === 200) {
           this.$message.success(response.data.message || '签到成功');
           this.cameraDialogVisible = false;
-          this.capturedImage = null;
-          this.selectedTask = null;
+          
+          // 如果是异常签到，询问是否申诉
+          if (response.data.data && response.data.data.status === '异常') {
+            this.handleAbnormalSign(response.data.data.recordId);
+          }
+          
           // 刷新签到记录
           this.fetchData();
         } else {
@@ -297,6 +346,50 @@ export default {
         ia[i] = byteString.charCodeAt(i);
       }
       return new Blob([ia], { type: mimeString });
+    },
+    
+    // 处理异常签到结果
+    handleAbnormalSign(recordId) {
+      this.$confirm('您的签到已记录为异常，是否提交申诉?', '签到异常', {
+        confirmButtonText: '提交申诉',
+        cancelButtonText: '稍后处理',
+        type: 'warning'
+      }).then(() => {
+        this.openAppealDialog(recordId);
+      }).catch(() => {
+        this.$message({
+          type: 'info',
+          message: '您可以稍后在"签到记录"中提交申诉'
+        });
+      });
+    },
+    
+    // 打开申诉对话框
+    openAppealDialog(recordId) {
+      this.appealForm.recordId = recordId;
+      this.appealForm.reason = '';
+      this.appealDialogVisible = true;
+    },
+    
+    // 提交申诉
+    async submitAppeal() {
+      this.$refs.appealForm.validate(async (valid) => {
+        if (valid) {
+          try {
+            const response = await submitAppeal(this.appealForm);
+            
+            if (response.code === 200) {
+              this.$message.success('申诉提交成功');
+              this.appealDialogVisible = false;
+              // 刷新签到记录
+              this.fetchData();
+            }
+          } catch (error) {
+            console.error('提交申诉失败:', error);
+            this.$message.error('申诉提交失败');
+          }
+        }
+      });
     }
   },
   watch: {

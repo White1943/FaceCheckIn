@@ -274,43 +274,54 @@ def submit_attendance():
 @student_attendance_bp.route('/sign', methods=['POST', 'OPTIONS'])
 @jwt_required()
 def submit_attendance_record():
-
+    # 处理 OPTIONS 请求
     if request.method == 'OPTIONS':
         return Result.success()
 
     try:
-        user_id = int(get_jwt_identity())
+        # 打印详细的请求信息
+        print(f"请求方法: {request.method}")
+        print(f"Content-Type: {request.content_type}")
+        print(f"表单数据: {request.form}")
+        print(f"JSON数据: {request.json if request.is_json else None}")
+        print(f"文件: {request.files}")
 
-        # 打印请求头和内容类型
-        print("请求头:", request.headers)
-        print("请求内容类型:", request.content_type)
-        print("请求数据:", request.data)
-        print("Form data:", dict(request.form))
-        print("Files:", request.files)
+        current_user_id = get_jwt_identity()
+        student = User.query.get(current_user_id)
 
-        task_id = None
-
-        # 尝试从不同来源获取task_id
+        # 尝试从不同来源获取task_id和位置信息
         if request.is_json:
             json_data = request.get_json()
             print("JSON数据:", json_data)
-            if json_data and 'task_id' in json_data:
-                task_id = json_data['task_id']
-            elif json_data and 'taskId' in json_data:  # 尝试驼峰命名
-                task_id = json_data['taskId']
+            if json_data:
+                task_id = json_data.get('task_id') or json_data.get('taskId')
+                lat = json_data.get('location_lat') or json_data.get('locationLat') or 0
+                lng = json_data.get('location_lng') or json_data.get('locationLng') or 0
         elif request.form:
             task_id = request.form.get('task_id') or request.form.get('taskId')
+            lat = request.form.get('location_lat') or request.form.get('locationLat') or 0
+            lng = request.form.get('location_lng') or request.form.get('locationLng') or 0
         elif request.data:
-
             try:
                 import json
                 data = json.loads(request.data)
                 task_id = data.get('task_id') or data.get('taskId')
+                lat = data.get('location_lat') or data.get('locationLat') or 0
+                lng = data.get('location_lng') or data.get('locationLng') or 0
                 print("手动解析JSON:", data)
             except:
-                pass
+                # 如果解析失败，设置默认值
+                task_id = None
+                lat = 0
+                lng = 0
 
-        print(f"找到的task_id: {task_id}")
+        # 如果没有获取到位置信息，设置为默认值
+        if 'lat' not in locals() or lat is None:
+            lat = 0
+        if 'lng' not in locals() or lng is None:
+            lng = 0
+
+        print(f"找到的task_id: {task_id}, 位置: lat={lat}, lng={lng}")
 
         if not task_id:
             return Result.error("缺少签到任务ID，请检查请求格式")
@@ -318,329 +329,259 @@ def submit_attendance_record():
         task_id = int(task_id)
         print(f"处理的task_id: {task_id}")
 
-        # 获取用户和签到任务信息
-        user = User.query.get_or_404(user_id)
 
-        task = AttendanceTask.query.get_or_404(task_id)
-        current_time = datetime.now()
-
-        # 检查任务是否已结束
-        if current_time > task.end_time:
-            return Result.error("签到已结束")
+        # 检查任务是否存在
+        task = AttendanceTask.query.get(task_id)
+        if not task:
+            return Result.error('签到任务不存在', code=404)
 
         # 检查是否已签到
         existing_record = AttendanceRecord.query.filter_by(
             task_id=task_id,
-            student_id=user_id
+            student_id=current_user_id
         ).first()
+
         if existing_record:
-            return Result.error("您已经签到过了")
+            return Result.error('您已经签到过了', code=400)
 
-        # 检查人脸图像
-        if 'face_image' not in request.files:
-            return Result.error("缺少人脸图像")
+        # 检查时间是否在有效范围内
+        current_time = datetime.now()
+        if current_time > task.end_time:
+            return Result.error('签到已结束', code=400)
 
-        face_image_file = request.files['face_image']
-        if not face_image_file or face_image_file.filename == '':
-            return Result.error("人脸图像无效")
+        # 获取人脸图像
+        if 'image' not in request.files and 'face_image' not in request.files:
+            return Result.error('缺少人脸图像', code=400)
 
-        # 保存上传的图像  位于 uploads/attendance
-        upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'attendance')
-        print(f"上传签到图像文件夹位于: {upload_folder}")
-        os.makedirs(upload_folder, exist_ok=True)
-        filename = f"{user_id}_{task_id}_{int(datetime.now().timestamp())}.jpg"
-        image_path = os.path.join(upload_folder, filename)
-        face_image_file.save(image_path)
-        print("加载已有图片： ",image_path)
+        # 同时兼容两种键名
+        if 'face_image' in request.files:
+            image_file = request.files['face_image']
+        else:
+            image_file = request.files['image']
+        
+        if not image_file:
+            return Result.error('人脸图像无效', code=400)
 
-        # 人脸识别逻辑
+        # 保存图像
+        filename = f"{current_user_id}_{task_id}_{int(time.time())}.jpg"
+        uploads_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'attendance')
+        if not os.path.exists(uploads_dir):
+            os.makedirs(uploads_dir, exist_ok=True)
+
+        image_path = os.path.join(uploads_dir, filename)
+        image_file.save(image_path)
+
+        # 人脸识别处理
         try:
             # 加载上传的图像
-            uploaded_image = face_recognition.load_image_file(image_path)
-            face_locations = face_recognition.face_locations(uploaded_image)
+            upload_image = face_recognition.load_image_file(image_path)
+            face_locations = face_recognition.face_locations(upload_image)
 
             if not face_locations:
-                return Result.error("未检测到人脸，请确保光线充足且正面对准摄像头")
+                # 未检测到人脸，可以删除已上传的图片
+                os.remove(image_path)
+                return Result.error('未检测到人脸，请确保人脸清晰可见', code=400)
 
             if len(face_locations) > 1:
-                return Result.error("检测到多张人脸，请确保画面中只有您自己")
+                # 检测到多个人脸，可以删除已上传的图片
+                os.remove(image_path)
+                return Result.error('检测到多个人脸，请确保只有您自己的脸出现在画面中', code=400)
 
-            # 获取用户头像路径
-            if not user.avatar:
-                return Result.error("您尚未设置头像，请先上传头像")
+            # 获取上传图像的人脸编码
+            face_encoding = face_recognition.face_encodings(upload_image, face_locations)[0]
 
-            # 处理头像路径
-            avatar_file = user.avatar.lstrip('/')
-            if avatar_file.startswith('static/'):
-                avatar_file = avatar_file[7:]  # 移除 'static/' 前缀
+            # 加载学生头像进行对比
+            if student.avatar:
+                # 处理头像路径
+                avatar_file = student.avatar.lstrip('/')
+                if avatar_file.startswith('static/'):
+                    avatar_file = avatar_file[7:]  # 移除 'static/' 前缀
 
-            user_avatar_path = os.path.join(current_app.root_path, 'static', avatar_file)
-            print(f"用户头像路径 (对比路径): {user_avatar_path}")
+                user_avatar_path = os.path.join(current_app.root_path, 'static', avatar_file)
+                print(f"用户头像路径 (对比路径): {user_avatar_path}")
+            else:
+                # 默认头像路径
+                user_avatar_path = os.path.join(current_app.root_path, 'static', 'images', 'avatars', 'default.jpg')
+                print(f"使用默认头像路径: {user_avatar_path}")
+
             # 检查文件是否存在
             if not os.path.exists(user_avatar_path):
                 print(f"用户头像不存在: {user_avatar_path}")
-                return Result.error("找不到您的头像文件，请重新上传头像")
+                return Result.error("找不到您的头像文件，请重新上传头像", code=400)
 
             # 加载用户头像并进行人脸比对
             user_image = face_recognition.load_image_file(user_avatar_path)
             user_face_locations = face_recognition.face_locations(user_image)
 
             if not user_face_locations:
-                print(f"用户 {user_id} 的头像中未检测到人脸")
-                return Result.error("您的头像中未检测到人脸，请重新上传清晰的头像照片")
+                print(f"用户 {current_user_id} 的头像中未检测到人脸")
+                return Result.error("您的头像中未检测到人脸，请重新上传清晰的头像照片", code=400)
 
             # 提取人脸特征
             user_face_encoding = face_recognition.face_encodings(user_image, [user_face_locations[0]])[0]
-            uploaded_face_encoding = face_recognition.face_encodings(uploaded_image, [face_locations[0]])[0]
 
-            # 比较人脸特征
-            matches = face_recognition.compare_faces([user_face_encoding], uploaded_face_encoding, tolerance=0.35)
-            face_distance = face_recognition.face_distance([user_face_encoding], uploaded_face_encoding)[0]
-            print(f"人脸匹配距离: {face_distance}, 是否匹配: {matches[0]}")
+            # 比较人脸
+            match_results = face_recognition.compare_faces([user_face_encoding], face_encoding, tolerance=0.6)
+            distance = face_recognition.face_distance([user_face_encoding], face_encoding)[0]
 
-            if not matches[0]:
-                return Result.error("人脸识别失败，请确保是本人操作")
+            print(f"人脸匹配结果: {match_results[0]}, 距离: {distance}")
+
+            # 判断签到状态
+            status = '正常'  # 默认正常
+
+            # 检查是否为异常签到 - 距离大于0.35认为是不匹配的
+            if distance > 0.35:
+                # 获取今天该学生之前的异常签到次数
+                today = datetime.now().date()
+                today_start = datetime.combine(today, datetime.min.time())
+                today_end = datetime.combine(today, datetime.max.time())
+
+                failure_count = AttendanceRecord.query.filter(
+                    AttendanceRecord.student_id == current_user_id,
+                    AttendanceRecord.created_at.between(today_start, today_end),
+                    AttendanceRecord.status == '异常'
+                ).count()
+
+                # 如果已经有2次或以上异常记录，这次将标记为异常
+                if failure_count >= 2:
+                    status = '异常'
+                    print(f"用户 {current_user_id} 今日已有 {failure_count} 次人脸识别失败，标记为异常")
+                else:
+                    # 仍然允许签到，但检查是否迟到
+                    if current_time > task.start_time + (task.end_time - task.start_time) * 0.5:
+                        status = '迟到'
+            else:
+                # 人脸匹配成功，检查是否迟到
+                if current_time > task.start_time + (task.end_time - task.start_time) * 0.5:
+                    status = '迟到'
+
+            # 创建签到记录前确保所有需要的变量都已定义
+            if 'lat' not in locals():
+                lat = 0
+            if 'lng' not in locals():
+                lng = 0
+
+            # 创建签到记录
+            record = AttendanceRecord(
+                task_id=task_id,
+                student_id=current_user_id,
+                course_id=task.course_id,
+                check_in_time=current_time,
+                status=status,
+                location_lat=lat,
+                location_lng=lng,
+                face_image=filename,
+                review_status='未申诉'
+            )
+
+            db.session.add(record)
+            db.session.commit()
+
+            response_data = {
+                'status': status,
+                'time': current_time.strftime('%Y-%m-%d %H:%M:%S')
+            }
+
+            # 如果是异常签到，告知用户可以申诉
+            if status == '异常':
+                response_data['recordId'] = record.id
+                return Result.success(
+                    data=response_data,
+                    message='签到已记录，但人脸识别异常，您可以提交申诉'
+                )
+            else:
+                return Result.success(
+                    data=response_data,
+                    message='签到成功'
+                )
 
         except Exception as e:
-            print(f"人脸识别过程中出错: {str(e)}")
-            # 开发环境中可以暂时注释下面这行，让签到流程继续
-            # return Result.error(f"人脸识别失败: {str(e)}")
-
-        # 判断是否迟到
-        status = '正常'
-        if current_time > task.end_time:
-            status = '迟到'
-
-        # 创建签到记录
-        record = AttendanceRecord(
-            task_id=task_id,
-            student_id=user_id,
-            course_id=task.course_id,
-            check_in_time=current_time,
-            status=status,
-            face_image=filename
-        )
-
-        db.session.add(record)
-        db.session.commit()
-
-        return Result.success(message=f"签到成功，状态: {status}")
+            print(f"人脸识别处理失败: {str(e)}")
+            return Result.error(f'人脸识别处理失败: {str(e)}', code=500)
 
     except Exception as e:
         db.session.rollback()
         print(f"签到失败: {str(e)}")
-        return Result.error(f"签到失败: {str(e)}")
+        import traceback
+        traceback.print_exc()  # 打印详细错误堆栈
+        return Result.error(f'签到失败: {str(e)}', code=500)
 
+# 添加申诉相关路由
+@student_attendance_bp.route('/appeal', methods=['POST'])
+@jwt_required()
+def submit_appeal():
+    try:
+        student_id = get_jwt_identity()
+        data = request.json
 
-#以下弃用，因为学生进行签到方面操作时，蓝图应该用student_attendance_bp
+        record_id = data.get('recordId')
+        reason = data.get('reason')
 
-# @student_course_bp.route('/attendance/sign', methods=['POST', 'OPTIONS'])
-# @jwt_required()
-# def sign_attendance():
-#     # 处理OPTIONS请求，解决CORS预检问题
-#     if request.method == 'OPTIONS':
-#         return Result.success()
+        if not record_id or not reason:
+            return Result.error('缺少必要参数', code=400)
 
-#     try:
-#         print("开始处理签到请求")
-#         user_id = int(get_jwt_identity())
-#         user = User.query.get(user_id)
+        # 获取记录
+        record = AttendanceRecord.query.get(record_id)
+        if not record:
+            return Result.error('签到记录不存在', code=404)
 
-#         if not user:
-#             return Result.error("用户不存在")
+        # 验证是否是本人的记录
+        if record.student_id != student_id:
+            return Result.error('无权限操作此记录', code=403)
 
-#         # 获取请求数据
-#         task_id = request.form.get('task_id')
-#         if not task_id:
-#             return Result.error("缺少签到任务ID")
+        # 验证是否是异常记录且未申诉
+        if record.status != '异常' or record.review_status != '未申诉':
+            return Result.error('只能申诉异常签到记录，且不能重复申诉', code=400)
 
-#         # 验证任务是否存在且在有效时间内
-#         task = AttendanceTask.query.get(task_id)
-#         if not task:
-#             return Result.error("签到任务不存在")
+        # 更新申诉状态
+        record.review_status = '待审核'
+        record.appeal_reason = reason
 
-#         # 检查任务是否已过期
-#         current_time = datetime.now()
-#         if current_time > task.end_time:
-#             return Result.error("签到已结束")
+        db.session.commit()
 
-#         # 检查是否已经签到
-#         existing_record = AttendanceRecord.query.filter_by(
-#             task_id=task_id,
-#             student_id=user_id
-#         ).first()
+        return Result.success(message='申诉提交成功，请等待教师审核')
 
-#         if existing_record:
-#             return Result.error("您已经签到过了")
+    except Exception as e:
+        db.session.rollback()
+        print(f"提交申诉失败: {str(e)}")
+        return Result.error(f'提交申诉失败: {str(e)}', code=500)
 
-#         # 处理人脸图像
-#         if 'face_image' not in request.files:
-#             return Result.error("缺少人脸图像")
+@student_attendance_bp.route('/appeals', methods=['GET'])
+@jwt_required()
+def get_appeals():
+    try:
+        student_id = get_jwt_identity()
 
-#         face_image_file = request.files['face_image']
-#         if not face_image_file or face_image_file.filename == '':
-#             return Result.error("人脸图像无效")
+        # 获取所有申诉记录
+        appeals = db.session.query(
+            AttendanceRecord, AttendanceTask, Course
+        ).join(
+            AttendanceTask, AttendanceRecord.task_id == AttendanceTask.task_id
+        ).join(
+            Course, AttendanceTask.course_id == Course.course_id
+        ).filter(
+            AttendanceRecord.student_id == student_id,
+            AttendanceRecord.review_status.in_(['待审核', '已审核'])
+        ).order_by(
+            AttendanceRecord.created_at.desc()
+        ).all()
 
-#         # 检查文件类型
-#         if not allowed_file(face_image_file.filename):
-#             return Result.error("不支持的图像类型，请使用JPG/PNG格式")
+        result = []
+        for record, task, course in appeals:
+            result.append({
+                'recordId': record.id,
+                'taskId': task.task_id,
+                'courseName': course.course_name,
+                'checkInTime': record.check_in_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'status': record.status,
+                'reviewStatus': record.review_status,
+                'appealReason': record.appeal_reason
+            })
 
-#         # 读取人脸图像
-#         face_image = face_recognition.load_image_file(face_image_file)
-#         face_locations = face_recognition.face_locations(face_image)
+        return Result.success(data={'items': result})
 
-#         if not face_locations:
-#             return Result.error("未检测到人脸，请确保光线充足且正面对准摄像头")
-
-#         if len(face_locations) > 1:
-#             return Result.error("检测到多个人脸，请确保只有您自己的脸出现在画面中")
-
-#         # 获取用户头像路径
-#         if not user.avatar:
-#             return Result.error("您尚未设置头像，请先上传头像")
-
-#         # 获取头像完整路径
-#         avatar_path = os.path.join(current_app.root_path, 'static', user.avatar.lstrip('/'))
-
-#         # 加载用户头像
-#         try:
-#             user_image = face_recognition.load_image_file(avatar_path)
-#             user_face_locations = face_recognition.face_locations(user_image)
-
-#             if not user_face_locations:
-#                 return Result.error("您的头像中未检测到人脸，请重新上传清晰的头像照片")
-
-#             # 使用第一个检测到的人脸
-#             user_face_encoding = face_recognition.face_encodings(user_image, [user_face_locations[0]])[0]
-#             face_encoding = face_recognition.face_encodings(face_image, [face_locations[0]])[0]
-
-#             # 比较人脸
-#             results = face_recognition.compare_faces([user_face_encoding], face_encoding, tolerance=0.6)
-#             face_distance = face_recognition.face_distance([user_face_encoding], face_encoding)[0]
-
-#             # 输出人脸匹配得分，便于调试
-#             print(f"Face match distance: {face_distance}, is match: {results[0]}")
-
-#             if not results[0]:
-#                 return Result.error("人脸验证失败，请确保是本人进行签到")
-
-#             # 确定签到状态
-#             status = '正常'
-#             if current_time > task.start_time:
-#                 # 如果当前时间已经超过了开始时间，则标记为迟到
-#                 status = '迟到'
-
-#             # 创建签到记录
-#             record = AttendanceRecord(
-#                 task_id=task.task_id,
-#                 student_id=user_id,
-#                 course_id=task.course_id,
-#                 check_in_time=current_time,
-#                 status=status
-#             )
-
-#             db.session.add(record)
-#             db.session.commit()
-
-#             return Result.success("签到成功")
-
-#         except Exception as e:
-#             print(f"人脸识别失败: {str(e)}")
-#             return Result.error(f"人脸识别失败: {str(e)}")
-
-#     except Exception as e:
-#         print(f"签到失败: {str(e)}")
-#         db.session.rollback()
-#         return Result.error(f"签到失败: {str(e)}")
-
-# @student_course_bp.route('/attendance/active', methods=['GET'])
-# @jwt_required()
-# def get_active_attendance_tasks():
-#     """获取当前可签到的任务"""
-#     try:
-#         user_id = int(get_jwt_identity())
-#         current_time = datetime.now()
-
-#         # 获取学生所在的所有课程ID
-#         course_ids = [cs.course_id for cs in CourseStudents.query.filter_by(
-#             student_id=user_id
-#         ).all()]
-
-#         if not course_ids:
-#             return Result.success(data={'items': []})
-
-#         # 获取这些课程中当前有效的签到任务
-#         tasks = AttendanceTask.query.filter(
-#             AttendanceTask.course_id.in_(course_ids),
-#             AttendanceTask.start_time <= current_time,
-#             AttendanceTask.end_time >= current_time,
-#             AttendanceTask.status == 'active'
-#         ).all()
-
-#         # 过滤掉已签到的任务
-#         result_tasks = []
-#         for task in tasks:
-#             record = AttendanceRecord.query.filter_by(
-#                 task_id=task.task_id,
-#                 student_id=user_id
-#             ).first()
-
-#             if not record:
-#                 course = Course.query.get(task.course_id)
-#                 teacher = User.query.get(task.teacher_id)
-
-#                 result_tasks.append({
-#                     'taskId': task.task_id,
-#                     'courseName': course.course_name,
-#                     'teacherName': teacher.real_name if teacher else '未知',
-#                     'startTime': task.start_time.strftime('%Y-%m-%d %H:%M'),
-#                     'endTime': task.end_time.strftime('%Y-%m-%d %H:%M')
-#                 })
-
-#         return Result.success(data={'items': result_tasks})
-
-#     except Exception as e:
-#         print(f"获取签到任务失败: {str(e)}")
-#         return Result.error(f"获取签到任务失败: {str(e)}")
-
-# @student_course_bp.route('/attendance/history', methods=['GET'])
-# @jwt_required()
-# def get_attendance_history():
-#     """获取学生的签到历史记录"""
-#     try:
-#         user_id = int(get_jwt_identity())
-
-#         # 获取所有签到记录
-#         records = db.session.query(
-#             AttendanceRecord, AttendanceTask, Course, User
-#         ).join(
-#             AttendanceTask, AttendanceRecord.task_id == AttendanceTask.task_id
-#         ).join(
-#             Course, AttendanceTask.course_id == Course.course_id
-#         ).join(
-#             User, AttendanceTask.teacher_id == User.user_id
-#         ).filter(
-#             AttendanceRecord.student_id == user_id
-#         ).order_by(
-#             AttendanceRecord.check_in_time.desc()
-#         ).all()
-
-#         history = []
-#         for record, task, course, teacher in records:
-#             history.append({
-#                 'recordId': record.record_id,
-#                 'courseName': course.course_name,
-#                 'teacherName': teacher.real_name,
-#                 'startTime': task.start_time.strftime('%Y-%m-%d %H:%M'),
-#                 'endTime': task.end_time.strftime('%Y-%m-%d %H:%M'),
-#                 'status': record.status,
-#                 'checkInTime': record.check_in_time.strftime('%Y-%m-%d %H:%M:%S')
-#             })
-
-#         return Result.success(data={'items': history})
-
-#     except Exception as e:
-#         print(f"获取签到历史失败: {str(e)}")
-#         return Result.error(f"获取签到历史失败: {str(e)}")
+    except Exception as e:
+        print(f"获取申诉记录失败: {str(e)}")
+        return Result.error(f'获取申诉记录失败: {str(e)}', code=500)
 
 

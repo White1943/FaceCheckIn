@@ -14,14 +14,7 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     # 配置CORS
-    CORS(app, resources={
-        r"/*": {
-            "origins": "*",
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"],
-            "supports_credentials": True
-        }
-    })
+    CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]}})
 
     #  uploads目录是放在与app同级的位置
     base_dir = os.path.dirname(app.root_path)  # 获取app的父目录，faceback/

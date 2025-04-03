@@ -54,21 +54,20 @@ export function getAttendanceHistory() {
   })
 }
 
-// 提交签到  人脸
-export function submitAttendance(data) {
-  // 确保data是一个FormData对象
-  if (!(data instanceof FormData)) {
-    console.error('submitAttendance期望接收FormData对象');
-    return Promise.reject(new Error('无效的数据格式'));
-  }
-
+// 提交签到（确保正确处理FormData对象）
+export function submitAttendance(formData) {
   return request({
     url: '/api/stu/attendance/sign',
     method: 'post',
-    data,
+    data: formData,
     headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+      // 关键修改：不要显式设置Content-Type，让浏览器自动设置，包括boundary
+      // 'Content-Type': 'multipart/form-data'
+    },
+    // 确保不会自动转换或处理FormData
+    transformRequest: [function(data) {
+      return data; // 不做任何转换，直接使用原始FormData
+    }]
   })
 }
 
@@ -79,3 +78,37 @@ export function submitAttendance(data) {
 //     method: 'get'
 //   })
 // }
+
+// 学生提交申诉
+export function submitAppeal(data) {
+  return request({
+    url: '/api/stu/attendance/appeal',
+    method: 'post',
+    data
+  })
+}
+
+// 学生获取申诉记录
+export function getStudentAppeals() {
+  return request({
+    url: '/api/stu/attendance/appeals',
+    method: 'get'
+  })
+}
+
+// 教师获取待审核申诉
+export function getAppeals() {
+  return request({
+    url: '/api/teacher/attendance/appeals',
+    method: 'get'
+  })
+}
+
+// 教师审核申诉
+export function reviewAppeal(recordId, data) {
+  return request({
+    url: `/api/teacher/attendance/appeals/${recordId}/review`,
+    method: 'post',
+    data
+  })
+}

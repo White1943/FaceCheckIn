@@ -1,12 +1,13 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.attendance_task import AttendanceTask
 from app.models.course import Course
+from app.models.user import User
+from app.models.attendance_record import AttendanceRecord
 from app.utils.response import Result
 from app import db
 from datetime import datetime, time, timedelta
 from app.attendance import teacher_attendance_bp
-from app.models.attendance_record import AttendanceRecord
 import os
 import base64
 import numpy as np
@@ -453,3 +454,85 @@ def get_student_face_image(record_id):
     except Exception as e:
         print(f"Get face image error: {str(e)}")
         return Result.error("获取照片失败")
+
+@teacher_attendance_bp.route('/appeals', methods=['GET'])
+@jwt_required()
+def get_teacher_appeals():
+    try:
+        teacher_id = get_jwt_identity()
+        
+        # 打印调试信息
+        print(f"Processing appeals request for teacher {teacher_id}")
+        
+        # 获取所有待审核的申诉记录
+        appeals = db.session.query(
+            AttendanceRecord, AttendanceTask, Course, User
+        ).join(
+            AttendanceTask, AttendanceRecord.task_id == AttendanceTask.task_id
+        ).join(
+            Course, AttendanceTask.course_id == Course.course_id
+        ).join(
+            User, AttendanceRecord.student_id == User.user_id
+        ).filter(
+            AttendanceTask.teacher_id == teacher_id,
+            AttendanceRecord.review_status == '待审核'
+        ).all()
+        
+        # 打印查询结果数量
+        print(f"Found {len(appeals)} appeals")
+        
+        result = []
+        for record, task, course, student in appeals:
+            result.append({
+                'recordId': record.id,
+                'taskId': task.task_id,
+                'courseName': course.course_name,
+                'studentName': student.real_name,
+                'checkInTime': record.check_in_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'status': record.status,
+                'appealReason': record.appeal_reason,
+                'faceImage': f'/uploads/attendance/{record.face_image}' if record.face_image else None
+            })
+        
+        return Result.success(data={'items': result})
+        
+    except Exception as e:
+        print(f"获取申诉记录失败: {str(e)}")
+        import traceback
+        traceback.print_exc()  # 打印详细错误堆栈
+        return Result.error(f'获取申诉记录失败: {str(e)}', code=500)
+
+@teacher_attendance_bp.route('/appeals/<int:record_id>/review', methods=['POST'])
+@jwt_required()
+def review_appeal(record_id):
+    try:
+        teacher_id = get_jwt_identity()
+        data = request.json
+        
+        approved = data.get('approved', False)
+        
+        # 获取记录
+        record = AttendanceRecord.query.get_or_404(record_id)
+        
+        # 验证权限
+        task = AttendanceTask.query.get(record.task_id)
+        if task.teacher_id != teacher_id:
+            return Result.error('无权审核此记录', code=403)
+        
+        # 验证记录状态
+        if record.review_status != '待审核':
+            return Result.error('该记录不在待审核状态', code=400)
+        
+        # 更新状态
+        record.review_status = '已审核'
+        if approved:
+            record.status = '正常'  # 审核通过，修改为正常签到
+        
+        db.session.commit()
+        
+        return Result.success(message='审核完成')
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"审核申诉失败: {str(e)}")
+        return Result.error(f'审核申诉失败: {str(e)}', code=500)
