@@ -16,7 +16,7 @@ def create_app(config_class=Config):
     # 配置CORS
     CORS(app, resources={
         r"/*": {
-            "origins": ["http://localhost:8085"],
+            "origins": "*",
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
             "supports_credentials": True
@@ -57,7 +57,7 @@ def create_app(config_class=Config):
     # 修改：更新静态文件路由
     @app.route('/uploads/<path:filename>')
     def uploaded_file(filename):
-        # 直接传递uploads_dir作为目录 
+        # 直接传递uploads_dir作为目录
         return send_from_directory(uploads_dir, filename)
 
     return app

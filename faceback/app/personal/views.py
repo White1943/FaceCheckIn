@@ -87,8 +87,6 @@ def update_avatar():
         print("请求头:", request.headers)
         print("请求文件:", request.files)
         print("请求表单:", request.form)
-        
-        # 检查文件是否存在于请求中
         if 'avatar' not in request.files:
             print("请求中没有avatar文件，尝试获取所有文件：", list(request.files.keys()))
             # 尝试从请求的第一个文件开始处理
@@ -100,35 +98,28 @@ def update_avatar():
                 return Result.error(message='没有上传文件', code=400)
         else:
             file = request.files['avatar']
-            
-        print(f"获取到的文件: {file.filename}")
 
+        print(f"获取到的文件: {file.filename}")
         # 检查文件名是否为空
         if file.filename == '':
             return Result.error(message='文件名为空', code=400)
-
         # 获取安全的文件名
         filename = secure_filename(file.filename)
-
         # 检查文件类型
         if not allowed_file(filename):
             return Result.error(message='不支持的文件类型，仅支持 JPG/PNG 格式', code=400)
-
         # 获取当前用户
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
         if not user:
             return Result.error(message='用户不存在', code=404)
-
         # 确保上传目录存在
         avatar_dir = os.path.join(current_app.root_path, 'static', 'images', 'avatars')
         os.makedirs(avatar_dir, exist_ok=True)
-
         # 生成新文件名
         ext = filename.rsplit('.', 1)[1].lower()
         new_filename = f'avatar_{current_user_id}_{int(time.time())}.{ext}'
         file_path = os.path.join(avatar_dir, new_filename)
-
         # 删除旧头像
         if user.avatar:
             old_avatar_path = os.path.join(current_app.root_path, 'static', user.avatar.lstrip('/'))
@@ -137,16 +128,12 @@ def update_avatar():
                     os.remove(old_avatar_path)
             except Exception as e:
                 print(f"删除旧头像失败: {str(e)}")
-
-        # 保存新文件
         try:
             file.save(file_path)
             print(f"文件已保存到: {file_path}")
         except Exception as e:
             print(f"保存文件失败: {str(e)}")
             return Result.error(message=f'保存文件失败: {str(e)}', code=500)
-
-        # 更新数据库
         try:
             user.avatar = f'/static/images/avatars/{new_filename}'
             db.session.commit()
@@ -156,18 +143,14 @@ def update_avatar():
             if os.path.exists(file_path):
                 os.remove(file_path)
             return Result.error(message=f'更新数据库失败: {str(e)}', code=500)
-
         return Result.success(
             message='头像上传成功',
             data={'avatar': user.avatar}
         )
-
     except Exception as e:
         print(f"处理上传请求失败: {str(e)}")
         db.session.rollback()
         return Result.error(message=f'上传失败: {str(e)}', code=500)
-
-
 @personal_bp.route('/avatar/<path:filename>', methods=['GET'])
 def get_avatar(filename):
     """获取头像图片"""
@@ -177,11 +160,8 @@ def get_avatar(filename):
 
         if not os.path.exists(file_path):
             return jsonify({'code': 404, 'message': '头像不存在'})
-
-        # 读取图片文件并返回
         with open(file_path, 'rb') as f:
             image_data = f.read()
-
         response = make_response(image_data)
         # 根据文件扩展名设置正确的 Content-Type
         ext = filename.rsplit('.', 1)[1].lower()

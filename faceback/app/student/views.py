@@ -394,7 +394,7 @@ def submit_attendance_record():
             uploaded_face_encoding = face_recognition.face_encodings(uploaded_image, [face_locations[0]])[0]
 
             # 比较人脸特征
-            matches = face_recognition.compare_faces([user_face_encoding], uploaded_face_encoding, tolerance=0.6)
+            matches = face_recognition.compare_faces([user_face_encoding], uploaded_face_encoding, tolerance=0.35)
             face_distance = face_recognition.face_distance([user_face_encoding], uploaded_face_encoding)[0]
             print(f"人脸匹配距离: {face_distance}, 是否匹配: {matches[0]}")
 
