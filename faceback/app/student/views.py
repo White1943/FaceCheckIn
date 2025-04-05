@@ -426,74 +426,117 @@ def submit_attendance_record():
 
             print(f"人脸匹配结果: {match_results[0]}, 距离: {distance}")
 
-            # 判断签到状态
-            status = '正常'  # 默认正常
-
-            # 检查是否为异常签到 - 距离大于0.35认为是不匹配的
-            if distance > 0.35:
-                # 获取今天该学生之前的异常签到次数
+            # 判断人脸识别是否通过
+            is_face_valid = match_results[0] and distance <= 0.35
+            
+            # 如果人脸识别失败，检查今天失败的次数
+            if not is_face_valid:
+                # 获取今天的日期范围
                 today = datetime.now().date()
                 today_start = datetime.combine(today, datetime.min.time())
                 today_end = datetime.combine(today, datetime.max.time())
-
-                failure_count = AttendanceRecord.query.filter(
-                    AttendanceRecord.student_id == current_user_id,
-                    AttendanceRecord.created_at.between(today_start, today_end),
-                    AttendanceRecord.status == '异常'
-                ).count()
-
-                # 如果已经有2次或以上异常记录，这次将标记为异常
-                if failure_count >= 2:
-                    status = '异常'
-                    print(f"用户 {current_user_id} 今日已有 {failure_count} 次人脸识别失败，标记为异常")
+                
+                # 改用更可靠的方式来跟踪失败尝试 - 使用单独的临时表或使用文件缓存
+                # 临时解决方案：使用缓存文件在服务器端存储失败尝试
+                cache_dir = os.path.join(current_app.root_path, 'temp')
+                os.makedirs(cache_dir, exist_ok=True)
+                cache_file = os.path.join(cache_dir, f"face_attempts_{current_user_id}_{task_id}.txt")
+                
+                # 读取已有的失败尝试
+                attempt_filenames = []
+                if os.path.exists(cache_file):
+                    try:
+                        with open(cache_file, 'r') as f:
+                            attempt_filenames = [line.strip() for line in f.readlines()]
+                    except Exception as e:
+                        print(f"读取缓存文件失败: {str(e)}")
+                
+                # 当前尝试添加到列表
+                attempt_filenames.append(filename)
+                
+                # 获取真正的失败次数
+                total_failures = len(attempt_filenames)
+                print(f"用户 {current_user_id} 任务 {task_id} 已有 {total_failures} 次人脸识别失败尝试")
+                
+                # 如果总失败次数 < 3，保存这次尝试并返回错误提示
+                if total_failures < 3:
+                    # 保存最新的尝试列表
+                    try:
+                        with open(cache_file, 'w') as f:
+                            for name in attempt_filenames:
+                                f.write(f"{name}\n")
+                    except Exception as e:
+                        print(f"保存缓存文件失败: {str(e)}")
+                    
+                    return Result.error(
+                        message=f'人脸识别未通过 (距离: {distance:.2f})，请重试。这是第 {total_failures} 次尝试，连续 3 次失败将记录为异常签到',
+                        code=400
+                    )
                 else:
-                    # 仍然允许签到，但检查是否迟到
-                    if current_time > task.start_time + (task.end_time - task.start_time) * 0.5:
-                        status = '迟到'
+                    # 如果已经有2次失败，这次是第3次，创建一个异常签到记录
+                    status = '异常'
+                    
+                    # 使用最后一次失败（当前）的图片
+                    final_image = filename
+                    
+                    # 成功创建异常记录后，删除缓存文件
+                    try:
+                        os.remove(cache_file)
+                    except Exception as e:
+                        print(f"删除缓存文件失败: {str(e)}")
             else:
-                # 人脸匹配成功，检查是否迟到
+                # 人脸识别通过，设置签到状态
+                status = '正常'
+                
+                # 检查是否迟到
                 if current_time > task.start_time + (task.end_time - task.start_time) * 0.5:
                     status = '迟到'
+                
+                final_image = filename
+                
+                # 如果有缓存文件，删除它
+                cache_file = os.path.join(current_app.root_path, 'temp', f"face_attempts_{current_user_id}_{task_id}.txt")
+                if os.path.exists(cache_file):
+                    try:
+                        os.remove(cache_file)
+                    except Exception as e:
+                        print(f"删除缓存文件失败: {str(e)}")
 
-            # 创建签到记录前确保所有需要的变量都已定义
-            if 'lat' not in locals():
-                lat = 0
-            if 'lng' not in locals():
-                lng = 0
-
-            # 创建签到记录
-            record = AttendanceRecord(
-                task_id=task_id,
-                student_id=current_user_id,
-                course_id=task.course_id,
-                check_in_time=current_time,
-                status=status,
-                location_lat=lat,
-                location_lng=lng,
-                face_image=filename,
-                review_status='未申诉'
-            )
-
-            db.session.add(record)
-            db.session.commit()
-
-            response_data = {
-                'status': status,
-                'time': current_time.strftime('%Y-%m-%d %H:%M:%S')
-            }
-
-            # 如果是异常签到，告知用户可以申诉
-            if status == '异常':
-                response_data['recordId'] = record.id
+            # 获取地理位置
+            location_lat = request.form.get('location_lat', 0)
+            location_lng = request.form.get('location_lng', 0)
+            
+            # 创建正式签到记录 - 注意这里不再使用check_in_type而是使用status
+            if is_face_valid or total_failures >= 3:
+                record = AttendanceRecord(
+                    task_id=task_id,
+                    student_id=current_user_id,
+                    course_id=task.course_id,
+                    check_in_time=current_time,
+                    status=status,  # 使用'正常', '迟到', '异常'等值
+                    location_lat=location_lat,
+                    location_lng=location_lng,
+                    face_image=final_image,
+                    review_status='未申诉' if status != '异常' else '待审核',
+                    appeal_reason="系统自动申诉: 连续三次人脸识别失败" if status == '异常' else None
+                )
+                
+                db.session.add(record)
+                db.session.commit()
+                
+                response_data = {
+                    'status': status,
+                    'recordId': record.id if status == '异常' else None,
+                    'message': '签到成功' if status != '异常' else '人脸识别异常，已自动提交申诉'
+                }
+                
                 return Result.success(
                     data=response_data,
-                    message='签到已记录，但人脸识别异常，您可以提交申诉'
+                    message='签到已记录，但人脸识别异常，已自动提交申诉' if status == '异常' else '签到成功'
                 )
-            else:
-                return Result.success(
-                    data=response_data,
-                    message='签到成功'
-                )
+            
+            # 理论上代码不会执行到这里
+            return Result.error("未知错误，请重试", code=500)
 
         except Exception as e:
             print(f"人脸识别处理失败: {str(e)}")

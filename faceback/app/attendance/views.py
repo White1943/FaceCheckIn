@@ -75,15 +75,23 @@ def create_task():
 def get_tasks():
     try:
         user_id = int(get_jwt_identity())
+        current_time = datetime.now()
+        # 首先更新所有已过期但未结束的任务
+        expired_tasks = AttendanceTask.query.filter(
+            AttendanceTask.end_time <= current_time,
+            AttendanceTask.status == 'active'
+        ).all()
+        for task in expired_tasks:
+            task.status = 'ended'    
+        if expired_tasks:
+            db.session.commit()
+            print(f"自动结束了 {len(expired_tasks)} 个过期任务")
         course_id = request.args.get('courseId')
         task_type = request.args.get('type', 'active')  # active 或 history
-
         # 构建查询
         query = AttendanceTask.query.filter_by(teacher_id=user_id)
         if course_id:
             query = query.filter_by(course_id=course_id)
-        
-        # 根据类型筛选
         if task_type == 'active':
             query = query.filter_by(status='active')
         else:
@@ -234,7 +242,7 @@ def sign_attendance():
             return Result.error(message='签到任务不存在', code=404)
             
         # 检查任务是否已过期
-        current_time = time.time()
+        current_time = datetime.now()
         if current_time > task.end_time:
             return Result.error(message='签到已结束', code=400)
             
@@ -255,8 +263,16 @@ def sign_attendance():
         if not face_image_file:
             return Result.error(message='人脸图像无效', code=400)
             
+        # 保存上传的图像
+        upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'attendance')
+        os.makedirs(upload_folder, exist_ok=True)
+        filename = f"{current_user_id}_{task_id}_{int(datetime.now().timestamp())}.jpg"
+        image_path = os.path.join(upload_folder, filename)
+        face_image_file.save(image_path)
+        print(f"保存签到图像: {image_path}")
+            
         # 读取上传的人脸图像
-        face_image = face_recognition.load_image_file(face_image_file)
+        face_image = face_recognition.load_image_file(image_path)
         face_locations = face_recognition.face_locations(face_image)
         
         # 检查是否检测到人脸
@@ -288,41 +304,120 @@ def sign_attendance():
             avatar_face_encoding = face_recognition.face_encodings(avatar_image, avatar_face_locations)[0]
             
             # 比较人脸
-            match = face_recognition.compare_faces([avatar_face_encoding], face_encoding, tolerance=0.6)
+            match_results = face_recognition.compare_faces([avatar_face_encoding], face_encoding, tolerance=0.6)
             distance = face_recognition.face_distance([avatar_face_encoding], face_encoding)[0]
             
-            print(f"人脸匹配结果: {match}, 距离: {distance}")
+            print(f"人脸匹配结果: {match_results[0]}, 距离: {distance}")
             
-            if not match[0]:
-                return Result.error(message='人脸验证失败，与注册头像不匹配', code=403)
+            # 判断人脸识别是否通过
+            is_face_valid = match_results[0] and distance <= 0.35
+            
+            # 如果人脸识别失败，检查今天失败的次数
+            if not is_face_valid:
+                # 获取今天的日期范围
+                today = datetime.now().date()
+                today_start = datetime.combine(today, datetime.min.time())
+                today_end = datetime.combine(today, datetime.max.time())
                 
-            # 如果距离太大，即使匹配也可能不是同一个人
-            if distance > 0.5:
-                return Result.error(message='人脸相似度过低，请尝试在更好的光线条件下重新签到', code=403)
+                # 获取今天失败的次数
+                failure_count = AttendanceRecord.query.filter(
+                    AttendanceRecord.student_id == current_user_id,
+                    AttendanceRecord.check_in_time.between(today_start, today_end),
+                    AttendanceRecord.status == '异常'
+                ).count()
                 
-            # 确定签到状态
-            status = 'normal'  # 正常
-            if current_time > task.start_time + (task.end_time - task.start_time) * 0.5:
-                status = 'late'  # 迟到
+                # 获取今天针对此任务的临时识别失败尝试记录
+                temp_failures = AttendanceRecord.query.filter(
+                    AttendanceRecord.student_id == current_user_id,
+                    AttendanceRecord.task_id == task_id,
+                    AttendanceRecord.check_in_time.between(today_start, today_end),
+                    AttendanceRecord.status == '识别尝试'  # 使用特殊状态标记临时记录
+                ).all()
                 
-            # 获取地理位置（如果提供）
+                # 总共失败次数 = 已存在的异常记录 + 临时识别失败记录
+                total_failures = failure_count + len(temp_failures)
+                
+                print(f"用户 {current_user_id} 今日已有 {total_failures} 次人脸识别失败尝试")
+                
+                # 如果总失败次数 < 2，创建一个临时识别失败记录
+                if total_failures < 2:
+                    temp_record = AttendanceRecord(
+                        task_id=task_id,
+                        student_id=current_user_id,
+                        course_id=task.course_id,
+                        check_in_time=current_time,
+                        status='识别尝试',  # 使用特殊状态标记临时记录
+                        location_lat=request.form.get('location_lat', 0),
+                        location_lng=request.form.get('location_lng', 0),
+                        face_image=filename,
+                        review_status='临时记录',
+                        appeal_reason="人脸识别距离过高：" + str(distance)
+                    )
+                    
+                    db.session.add(temp_record)
+                    db.session.commit()
+                    
+                    return Result.error(
+                        message=f'人脸识别未通过 (距离: {distance:.2f})，请重试。这是第 {total_failures + 1} 次尝试，连续 3 次失败将记录为异常签到',
+                        code=400
+                    )
+                else:
+                    # 如果已经有2次失败，这次是第3次，创建一个异常签到记录
+                    status = '异常'
+                    
+                    # 收集今天所有临时失败记录的图片名
+                    failure_images = [record.face_image for record in temp_failures if record.face_image]
+                    # 添加当前失败的图片
+                    failure_images.append(filename)
+                    
+                    # 使用最后一次失败（当前）的图片
+                    final_image = filename
+                    
+                    # 删除所有临时记录
+                    for record in temp_failures:
+                        db.session.delete(record)
+            else:
+                # 人脸识别通过，设置签到状态
+                status = '正常'
+                
+                # 检查是否迟到
+                if current_time > task.start_time + (task.end_time - task.start_time) * 0.5:
+                    status = '迟到'
+                
+                final_image = filename
+
+            # 获取地理位置
             location_lat = request.form.get('location_lat', 0)
             location_lng = request.form.get('location_lng', 0)
             
-            # 记录签到
-            record = AttendanceRecord(
-                task_id=task_id,
-                student_id=current_user_id,
-                status=status,
-                sign_time=int(current_time),
-                location_lat=location_lat,
-                location_lng=location_lng
-            )
-            
-            db.session.add(record)
-            db.session.commit()
-            
-            return Result.success(message='签到成功')
+            # 如果不是临时记录，创建正式签到记录
+            if is_face_valid or (not is_face_valid and total_failures >= 2):
+                record = AttendanceRecord(
+                    task_id=task_id,
+                    student_id=current_user_id,
+                    course_id=task.course_id,
+                    check_in_time=current_time,
+                    status=status,
+                    location_lat=location_lat,
+                    location_lng=location_lng,
+                    face_image=final_image,
+                    review_status='未申诉' if status != '异常' else '待审核',
+                    appeal_reason="系统自动申诉: 连续三次人脸识别失败" if status == '异常' else None
+                )
+                
+                db.session.add(record)
+                db.session.commit()
+                
+                response_data = {
+                    'status': status,
+                    'recordId': record.id if status == '异常' else None,
+                    'message': '签到成功' if status != '异常' else '人脸识别异常，已自动提交申诉'
+                }
+                
+                return Result.success(
+                    data=response_data,
+                    message='签到已记录，但人脸识别异常，已自动提交申诉' if status == '异常' else '签到成功'
+                )
             
         except Exception as e:
             print(f"处理人脸识别失败: {str(e)}")
