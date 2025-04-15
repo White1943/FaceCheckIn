@@ -76,18 +76,26 @@ def get_tasks():
     try:
         user_id = int(get_jwt_identity())
         current_time = datetime.now()
+        
         # 首先更新所有已过期但未结束的任务
         expired_tasks = AttendanceTask.query.filter(
             AttendanceTask.end_time <= current_time,
             AttendanceTask.status == 'active'
         ).all()
+        
+        # 记录自动结束的任务数量
+        auto_ended_count = len(expired_tasks)
+        
         for task in expired_tasks:
             task.status = 'ended'
+            
         if expired_tasks:
             db.session.commit()
-            print(f"自动结束了 {len(expired_tasks)} 个过期任务")
+            print(f"自动结束了 {auto_ended_count} 个过期任务")
+        
         course_id = request.args.get('courseId')
         task_type = request.args.get('type', 'active')  # active 或 history
+        
         # 构建查询
         query = AttendanceTask.query.filter_by(teacher_id=user_id)
         if course_id:
@@ -124,7 +132,8 @@ def get_tasks():
             })
 
         return Result.success(data={
-            'items': result_items
+            'items': result_items,
+            'autoEndedCount': auto_ended_count
         })
 
     except Exception as e:
@@ -307,7 +316,8 @@ def sign_attendance():
             match_results = face_recognition.compare_faces([avatar_face_encoding], face_encoding, tolerance=0.6)
             distance = face_recognition.face_distance([avatar_face_encoding], face_encoding)[0]
 
-            print(f"人脸匹配结果: {match_results[0]}, 距离: {distance}")
+            print(f"人脸匹配结果: {match_results[0]} ")
+            # print(f"人脸匹配结果: {match_results[0]}, 距离: {distance}")
 
             # 判断人脸识别是否通过
             is_face_valid = match_results[0] and distance <= 0.35
@@ -358,7 +368,7 @@ def sign_attendance():
                     db.session.commit()
 
                     return Result.error(
-                        message=f'人脸识别未通过 (距离: {distance:.2f})，请重试。这是第 {total_failures + 1} 次尝试，连续 3 次失败将记录为异常签到',
+                        message=f'人脸识别未通过，请重试。这是第 {total_failures} 次尝试，连续 3 次失败将记录为异常签到',
                         code=400
                     )
                 else:

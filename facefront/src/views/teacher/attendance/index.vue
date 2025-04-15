@@ -134,6 +134,18 @@
         <el-empty description="无签到照片"></el-empty>
       </div>
     </el-dialog>
+
+    <!-- 过期任务自动结束提示 -->
+    <el-alert
+      v-if="autoEndedTasksCount > 0"
+      title="系统消息"
+      type="info"
+      :description="`系统已自动结束 ${autoEndedTasksCount} 个过期的签到任务`"
+      show-icon
+      :closable="true"
+      @close="clearAutoEndedNotification"
+      style="margin-bottom: 15px;"
+    />
   </div>
 </template>
 
@@ -163,7 +175,9 @@ export default {
       currentTaskDetails: null,
       photoVisible: false,   // 照片查看对话框显示状态
       currentPhoto: null,    // 当前查看的照片URL
-      apiBaseUrl: 'http://localhost:5001'  // 后端API基础URL
+      apiBaseUrl: 'http://localhost:5001',  // 后端API基础URL
+      // 新增自动结束任务计数
+      autoEndedTasksCount: 0
     }
   },
   created() {
@@ -197,6 +211,11 @@ export default {
             this.activeAttendanceList = response.data.items
           } else {
             this.historyAttendanceList = response.data.items
+          }
+          
+          // 检查是否有任务被自动结束
+          if (response.data.autoEndedCount && response.data.autoEndedCount > 0) {
+            this.autoEndedTasksCount = response.data.autoEndedCount
           }
         }
       } catch (error) {
@@ -304,6 +323,10 @@ export default {
         '缺课': 'danger'
       }
       return statusMap[status] || 'info'
+    },
+    // 清除自动结束任务的通知
+    clearAutoEndedNotification() {
+      this.autoEndedTasksCount = 0
     }
   },
   watch: {

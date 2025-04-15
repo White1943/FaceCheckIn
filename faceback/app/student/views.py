@@ -469,7 +469,7 @@ def submit_attendance_record():
                         print(f"保存缓存文件失败: {str(e)}")
                     
                     return Result.error(
-                        message=f'人脸识别未通过 (距离: {distance:.2f})，请重试。这是第 {total_failures} 次尝试，连续 3 次失败将记录为异常签到',
+                        message=f'人脸识别未通过，请重试。这是第 {total_failures} 次尝试，连续 3 次失败将记录为异常签到',
                         code=400
                     )
                 else:
