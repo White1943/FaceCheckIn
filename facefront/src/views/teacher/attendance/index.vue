@@ -26,8 +26,19 @@
             <el-table-column label="结束时间" prop="endTime" />
             <el-table-column label="已签到/总人数" prop="attendanceRate" />
             <el-table-column label="操作">
-              <template #default="scope">
-                <el-button type="text" @click="endAttendance(scope.row)">
+              <template slot-scope="scope">
+                <el-button
+                  size="mini"
+                  @click="viewTaskDetails(scope.row.taskId)"
+                >
+                  查看详情
+                </el-button>
+                <el-button
+                  v-if="scope.row.status === 'active'"
+                  size="mini"
+                  type="danger"
+                  @click="handleEndTask(scope.row)"
+                >
                   结束签到
                 </el-button>
               </template>
@@ -150,7 +161,8 @@
 </template>
 
 <script>
-import { getTeacherCourses, createAttendanceTask, getAttendanceTasks, endAttendanceTask, getTaskRecords  } from '@/api/attendance'
+import { getTeacherCourses } from '@/api/course'
+import { getAttendanceTasks, createAttendanceTask, endAttendanceTask, getTaskRecords  } from '@/api/attendance'
 
 export default {
   name: 'TeacherAttendance',
@@ -177,12 +189,14 @@ export default {
       currentPhoto: null,    // 当前查看的照片URL
       apiBaseUrl: 'http://localhost:5001',  // 后端API基础URL
       // 新增自动结束任务计数
-      autoEndedTasksCount: 0
+      autoEndedTasksCount: 0,
+      teacherCourses: [], // To store courses for the dropdown
     }
   },
   created() {
     this.fetchCourses()
     this.fetchAttendanceTasks()
+    this.fetchTeacherCoursesForDropdown()
   },
   methods: {
     // 获取教师的课程列表
@@ -268,20 +282,43 @@ export default {
       }
     },
     // 结束签到任务
-    async endAttendance(task) {
+    async handleEndTask(task) {
+      // --- Add Logs ---
+      console.log("Attempting to end task:", task);
+      if (!task || !task.taskId) {
+          console.error("handleEndTask called without valid task object or taskId");
+          this.$message.error('无法结束签到：任务信息无效');
+          return;
+      }
+      // --- End Logs ---
+
       try {
-        await this.$confirm('确认结束该签到任务?', '提示', {
+        await this.$confirm(`确认结束课程 "${task.courseName}" 的本次签到吗?`, '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
           type: 'warning'
-        })
-        const response = await endAttendanceTask(task.taskId)
+        });
+
+        console.log("Calling endAttendanceTask API for taskId:", task.taskId); // Log before API call
+        // --- Ensure correct API function is called ---
+        const response = await endAttendanceTask(task.taskId);
+        // --- End Ensure correct API function is called ---
+
+        console.log("API Response for end task:", response); // Log API response
+
         if (response.code === 200) {
-          this.$message.success('签到任务已结束')
-          this.fetchAttendanceTasks()
+          this.$message.success('签到已结束');
+          // Refresh the task list to reflect the status change
+          this.fetchAttendanceTasks();
+        } else {
+          this.$message.error(`结束签到失败: ${  response.message}`);
         }
       } catch (error) {
-        if (error !== 'cancel') {
-          console.error('结束签到任务失败:', error)
-          this.$message.error('结束签到任务失败')
+        if (error === 'cancel') {
+          this.$message.info('操作已取消');
+        } else {
+          console.error('结束签到时出错:', error); // Log the actual error
+          this.$message.error(`结束签到时出错: ${  error.message || '请查看控制台'}`);
         }
       }
     },
@@ -327,7 +364,26 @@ export default {
     // 清除自动结束任务的通知
     clearAutoEndedNotification() {
       this.autoEndedTasksCount = 0
-    }
+    },
+    viewTaskDetails(taskId) {
+      // Navigate to the new details route
+      this.$router.push({ name: 'TeacherTaskDetails', params: { taskId: taskId } });
+    },
+    async fetchTeacherCoursesForDropdown() {
+      try {
+        // Ensure this uses the correct API function
+        const response = await getTeacherCourses(); // No params needed? Or maybe { limit: 0 } to get all?
+        if (response.code === 200) {
+          // Assuming response.data.items contains the course list
+          this.teacherCourses = response.data.items;
+        } else {
+          this.$message.error(`获取教师课程列表失败: ${  response.message}`);
+        }
+      } catch (error) {
+        console.error("Error fetching teacher courses for dropdown:", error);
+        this.$message.error('获取教师课程列表失败');
+      }
+    },
   },
   watch: {
     activeTab() {

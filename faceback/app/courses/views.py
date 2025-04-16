@@ -1,6 +1,7 @@
-from flask import request, Blueprint, current_app
+from flask import request, Blueprint, current_app, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 
 from app import db
 from app.courses import course_bp
@@ -9,151 +10,183 @@ from app.models.course_students import CourseStudents
 from app.models.user import User
 from app.utils.response import Result
 from datetime import datetime
+import traceback
 
-@course_bp.route('/add', methods=['POST'])
+@course_bp.route('/teacher/courses', methods=['POST'])
 @jwt_required()
 def create_course():
     try:
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+        if not user:
+             return Result.error("授权用户不存在", code=404)
+        if user.role != '教师':
+             return Result.error("只有教师才能创建课程", code=403)
+
         data = request.get_json()
+        if not data:
+            return Result.error("请求体不能为空", code=400)
 
-        # 验证必填字段
         required_fields = ['courseName', 'semester', 'startTime', 'location']
-        for field in required_fields:
-            if field not in data:
-                return Result.error(f"缺少必填字段: {field}")
+        missing_fields = [field for field in required_fields if field not in data or not data[field]]
+        if missing_fields:
+            return Result.error(f"缺少或无效的必填字段: {', '.join(missing_fields)}", code=400)
 
-        # 获取对应的下课时间
-        end_time = Course.get_end_time(data['startTime'])
-        if not end_time:
-            return Result.error("无效的上课时间")
+        start_time_str = data['startTime']
+        try:
+            start_time_obj = datetime.strptime(start_time_str, '%H:%M').time()
+            end_time_str = Course.get_end_time(start_time_str)
+            if not end_time_str:
+                current_app.logger.error(f"Failed to calculate end_time for start_time: {start_time_str}")
+                return Result.error(f"无法为开始时间 {start_time_str} 计算有效的结束时间", code=400)
+            end_time_obj = datetime.strptime(end_time_str, '%H:%M').time()
+        except ValueError:
+             current_app.logger.error(f"Invalid time format received: {start_time_str}")
+             return Result.error(f"时间格式错误: '{start_time_str}'，应为 HH:MM", code=400)
+        except Exception as time_e:
+             current_app.logger.error(f"Error processing time {start_time_str}: {time_e}")
+             traceback.print_exc()
+             return Result.error(f"处理时间时出错: {time_e}", code=500)
 
-        # 创建课程
-        course = Course(
-            course_name=data['courseName'],
-            teacher_id=user_id,
-            semester=data['semester'],
-            description=data.get('description', ''),
-            start_time=datetime.strptime(data['startTime'], '%H:%M').time(),
-            end_time=datetime.strptime(end_time, '%H:%M').time(),
-            location=data['location']
-        )
+        try:
+            course = Course(
+                course_name=data['courseName'],
+                teacher_id=user_id,
+                semester=data['semester'],
+                description=data.get('description', ''),
+                start_time=start_time_obj,
+                end_time=end_time_obj,
+                location=data['location']
+            )
+            db.session.add(course)
+            db.session.flush()
+            current_app.logger.info(f"Attempting to add course: {course.to_dict()}")
+            db.session.commit()
+            current_app.logger.info(f"Successfully added course ID: {course.course_id}")
+            return Result.success(data=course.to_dict(), message="课程创建成功")
 
-        db.session.add(course)
-        db.session.commit()
-
-        return Result.success(message="课程创建成功")
+        except IntegrityError as ie:
+            db.session.rollback()
+            current_app.logger.error(f"Database Integrity Error: {ie}")
+            traceback.print_exc()
+            return Result.error(f"数据库错误: {ie}", code=409)
+        except Exception as db_e:
+            db.session.rollback()
+            current_app.logger.error(f"Database Error on commit: {db_e}")
+            traceback.print_exc()
+            return Result.error(f"保存课程到数据库时出错: {db_e}", code=500)
 
     except Exception as e:
-        print(f"Create course error: {str(e)}")
-        return Result.error("创建课程失败")
+        current_app.logger.error(f"Unexpected error in create_course: {e}")
+        traceback.print_exc()
+        return Result.error(f"创建课程时发生意外错误: {str(e)}", code=500)
 
-@course_bp.route('/listpage', methods=['GET'])
+@course_bp.route('/teacher/courses', methods=['GET'])
 @jwt_required()
 def get_courses():
     try:
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())
         user = User.query.get(user_id)
+        if not user: return Result.error("用户不存在", 404)
+        if user.role != '教师': return Result.error("无权访问", 403)
 
-        # 获取查询参数
         page = request.args.get('page', 1, type=int)
         limit = request.args.get('limit', 10, type=int)
         keyword = request.args.get('keyword', '')
 
-        # 构建查询
-        if user.role == '教师' or user.role =='管理员':
-            # 教师查看自己创建的课程
-            query = Course.query.filter_by(teacher_id=user_id)
-        else:
-            # 学生查看已选课程
-            # 使用 course_students 关联表进行查询
-            query = Course.query.join(
-                CourseStudents,
-                Course.course_id == CourseStudents.course_id
-            ).filter(CourseStudents.student_id == user_id)
-
-        # 添加搜索条件
+        query = Course.query.filter_by(teacher_id=user_id)
         if keyword:
-            query = query.filter(Course.course_name.like(f'%{keyword}%'))
+            query = query.filter(Course.course_name.ilike(f'%{keyword}%'))
 
-        # 执行分页查询
-        pagination = query.paginate(page=page, per_page=limit, error_out=False)
+        pagination = query.order_by(Course.created_at.desc()).paginate(page=page, per_page=limit, error_out=False)
         courses = pagination.items
+        total = pagination.total
 
-        # 使用 Result 类封装返回数据
-        return Result.success(data={
-            'total': pagination.total,
-            'items': [{
-                'courseId': c.course_id,
-                'courseName': c.course_name,
-                'semester': c.semester,
-                'startTime': c.start_time.strftime('%H:%M') if c.start_time else None,
-                'endTime': c.end_time.strftime('%H:%M') if c.end_time else None,
-                'location': c.location,
-                'description': c.description
-            } for c in courses]
-        })
-
+        return Result.success(data={'total': total, 'items': [c.to_dict() for c in courses]})
     except Exception as e:
-        print(f"Get courses error: {str(e)}")
-        # 在开发环境打印详细错误信息
-        import traceback
+        current_app.logger.error(f"Error getting teacher courses: {e}")
         traceback.print_exc()
         return Result.error("获取课程列表失败")
 
-@course_bp.route('/<int:course_id>', methods=['PUT'])
+@course_bp.route('/teacher/courses/<int:course_id>', methods=['PUT'])
 @jwt_required()
 def update_course(course_id):
     try:
         user_id = int(get_jwt_identity())
-        data = request.get_json()
- 
+        user = User.query.get(user_id)
+        if not user: return Result.error("用户不存在", 404)
+
         course = Course.query.get_or_404(course_id)
-        print(user_id)
-        print(course.teacher_id)
         if course.teacher_id != user_id:
             return Result.error("无权修改此课程", code=403)
- 
-        required_fields = ['courseName', 'semester', 'startTime', 'location']
-        for field in required_fields:
-            if field not in data:
-                return Result.error(f"缺少必填字段: {field}")
- 
-        end_time = Course.get_end_time(data['startTime'])
-        if not end_time:
-            return Result.error("无效的上课时间")
- 
-        course.course_name = data['courseName']
-        course.semester = data['semester']
-        course.description = data.get('description', '')
-        course.start_time = datetime.strptime(data['startTime'], '%H:%M').time()
-        course.end_time = datetime.strptime(end_time, '%H:%M').time()
-        course.location = data['location']
 
-        db.session.commit()
-        return Result.success(message="课程更新成功")
+        data = request.get_json()
+        if not data: return Result.error("请求体不能为空", 400)
+
+        required_fields = ['courseName', 'semester', 'startTime', 'location']
+        missing_fields = [field for field in required_fields if field not in data or not data[field]]
+        if missing_fields:
+            return Result.error(f"缺少或无效的必填字段: {', '.join(missing_fields)}", code=400)
+
+        start_time_str = data['startTime']
+        try:
+            start_time_obj = datetime.strptime(start_time_str, '%H:%M').time()
+            end_time_str = Course.get_end_time(start_time_str)
+            if not end_time_str:
+                 current_app.logger.error(f"Update: Failed end_time for start_time: {start_time_str}")
+                 return Result.error(f"无法为开始时间 {start_time_str} 计算有效的结束时间", code=400)
+            end_time_obj = datetime.strptime(end_time_str, '%H:%M').time()
+        except ValueError:
+             current_app.logger.error(f"Update: Invalid time format: {start_time_str}")
+             return Result.error(f"时间格式错误: '{start_time_str}'，应为 HH:MM", code=400)
+        except Exception as time_e:
+             current_app.logger.error(f"Update: Error processing time {start_time_str}: {time_e}")
+             traceback.print_exc()
+             return Result.error(f"处理时间时出错: {time_e}", code=500)
+
+        try:
+            course.course_name = data['courseName']
+            course.semester = data['semester']
+            course.description = data.get('description', course.description)
+            course.start_time = start_time_obj
+            course.end_time = end_time_obj
+            course.location = data['location']
+            db.session.commit()
+            return Result.success(data=course.to_dict(), message="课程更新成功")
+        except Exception as db_e:
+            db.session.rollback()
+            current_app.logger.error(f"Update DB Error: {db_e}")
+            traceback.print_exc()
+            return Result.error(f"更新课程到数据库时出错: {db_e}", code=500)
 
     except Exception as e:
-        print(f"Update course error: {str(e)}")
-        return Result.error("更新课程失败")
+        current_app.logger.error(f"Unexpected error in update_course: {e}")
+        traceback.print_exc()
+        return Result.error(f"更新课程时发生意外错误: {str(e)}", code=500)
 
-@course_bp.route('/<int:course_id>', methods=['DELETE'])
+@course_bp.route('/teacher/courses/<int:course_id>', methods=['DELETE'])
 @jwt_required()
 def delete_course(course_id):
     try:
         user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+        if not user: return Result.error("用户不存在", 404)
 
-        # 获取课程并验证权限
         course = Course.query.get_or_404(course_id)
         if course.teacher_id != user_id:
             return Result.error("无权删除此课程", code=403)
 
-        # 删除课程
-        db.session.delete(course)
-        db.session.commit()
-
-        return Result.success(message="课程删除成功")
+        try:
+            db.session.delete(course)
+            db.session.commit()
+            return Result.success(message="课程删除成功")
+        except Exception as db_e:
+            db.session.rollback()
+            current_app.logger.error(f"Delete DB Error: {db_e}")
+            traceback.print_exc()
+            return Result.error(f"删除课程时数据库出错: {db_e}", code=500)
 
     except Exception as e:
-        print(f"Delete course error: {str(e)}")
-        return Result.error("删除课程失败")
+        current_app.logger.error(f"Unexpected error in delete_course: {e}")
+        traceback.print_exc()
+        return Result.error(f"删除课程时发生意外错误: {str(e)}", code=500)

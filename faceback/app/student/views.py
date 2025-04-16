@@ -24,6 +24,7 @@ from datetime import datetime
 from PIL import Image
 
 from app.models.user import User
+from sqlalchemy import or_
 
 
 
@@ -34,96 +35,147 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].upper() in ALLOWED_EXTENSIONS
 
-@student_course_bp.route('/list', methods=['GET'])
+@student_course_bp.route('/courses', methods=['GET'])
 @jwt_required()
-def get_student_courses():
+def get_student_enrolled_courses():
+    """Fetches courses the logged-in student is currently enrolled in."""
     try:
-        user_id = int(get_jwt_identity())
+        student_id = int(get_jwt_identity())
+        user = User.query.get(student_id)
+        if not user or user.role != '学生':
+            return Result.error("用户无效或非学生", code=403)
 
-        # 获取学生已选课程
-        courses = Course.query.join(CourseStudents).filter(
-            CourseStudents.student_id == user_id
-        ).all()
+        # --- Get search query ---
+        search_term = request.args.get('search', None, type=str)
+        # --- End Get search query ---
 
-        return Result.success(data={
-            'items': [{
-                'courseId': course.course_id,
-                'courseName': course.course_name,
-                'teacherName': course.teacher.real_name,
-                'semester': course.semester,
-                'classTime': f"{course.start_time.strftime('%H:%M')}-{course.end_time.strftime('%H:%M')}",
-                'location': course.location
-            } for course in courses]
-        })
+        # Base query using the relationship
+        query = user.enrolled_courses
 
+        # --- Apply search filter ---
+        if search_term:
+            search_pattern = f"%{search_term}%"
+            query = query.filter(
+                or_(
+                    Course.course_name.like(search_pattern),
+                    Course.description.like(search_pattern),
+                    # Add other searchable fields if needed
+                    # Course.location.like(search_pattern),
+                    # Course.teacher.has(User.real_name.like(search_pattern)) # Search teacher name (requires join)
+                )
+            )
+        # --- End Apply search filter ---
+
+        enrolled_courses = query.order_by(Course.course_name).all()
+        return Result.success(data=[course.to_dict() for course in enrolled_courses])
     except Exception as e:
-        print(f"Get student courses error: {str(e)}")
-        return Result.error("获取课程列表失败")
+        current_app.logger.error(f"Error fetching enrolled courses for student {student_id}: {e}")
+        traceback.print_exc()
+        return Result.error("获取已选课程列表失败")
 
 @student_course_bp.route('/available', methods=['GET'])
 @jwt_required()
-def get_available_courses():
+def get_available_courses_for_student():
+    """Fetches courses available for the logged-in student to enroll in."""
     try:
-        user_id = int(get_jwt_identity())
+        student_id = int(get_jwt_identity())
+        user = User.query.get(student_id)
+        if not user or user.role != '学生':
+            return Result.error("用户无效或非学生", code=403)
 
-        # 获取所有课程
-        all_courses = Course.query.all()
-        # 获取学生已选课程ID
-        selected_course_ids = set(
-            cs.course_id for cs in CourseStudents.query.filter_by(student_id=user_id).all()
+        # --- Get search query ---
+        search_term = request.args.get('search', None, type=str)
+        # --- End Get search query ---
+
+        enrolled_course_ids = [course.course_id for course in user.enrolled_courses]
+
+        # Base query
+        available_courses_query = Course.query.filter(
+            Course.teacher_id != student_id,
+            ~Course.course_id.in_(enrolled_course_ids)
         )
 
-        return Result.success(data={
-            'items': [{
-                'courseId': course.course_id,
-                'courseName': course.course_name,
-                'teacherName': course.teacher.real_name,
-                'semester': course.semester,
-                'classTime': f"{course.start_time.strftime('%H:%M')}-{course.end_time.strftime('%H:%M')}",
-                'location': course.location,
-                'selected': course.course_id in selected_course_ids
-            } for course in all_courses]
-        })
+        # --- Apply search filter ---
+        if search_term:
+            search_pattern = f"%{search_term}%"
+            available_courses_query = available_courses_query.filter(
+                 or_(
+                    Course.course_name.like(search_pattern),
+                    Course.description.like(search_pattern),
+                    # Add other searchable fields if needed
+                    # Course.location.like(search_pattern),
+                    # Course.teacher.has(User.real_name.like(search_pattern)) # Search teacher name (requires join)
+                )
+            )
+        # --- End Apply search filter ---
 
+        available_courses = available_courses_query.order_by(Course.course_name).all()
+        return Result.success(data=[course.to_dict() for course in available_courses])
     except Exception as e:
-        print(f"Get available courses error: {str(e)}")
-        return Result.error("获取可选课程失败")
+        current_app.logger.error(f"Error fetching available courses: {e}")
+        traceback.print_exc()
+        return Result.error("获取可选课程列表失败")
 
 @student_course_bp.route('/select', methods=['POST'])
 @jwt_required()
-def select_course():
+def select_course_for_student():
+    """Allows the logged-in student to select/enroll in a course."""
     try:
-        user_id = int(get_jwt_identity())
+        student_id = int(get_jwt_identity())
+        user = User.query.get(student_id)
+        if not user or user.role != '学生':
+            return Result.error("用户无效或非学生", code=403)
         data = request.get_json()
-        course_id = data.get('courseId')
-
-        if not course_id:
-            return Result.error("缺少课程ID")
-
-        # 检查课程是否存在
-        course = Course.query.get_or_404(course_id)
-
-        # 检查是否已选
-        if CourseStudents.query.filter_by(
-            student_id=user_id,
-            course_id=course_id
-        ).first():
-            return Result.error("已经选择了该课程")
-
-        # 创建选课记录
-        course_student = CourseStudents(
-            student_id=user_id,
-            course_id=course_id
-        )
-        db.session.add(course_student)
+        if not data or 'courseId' not in data:
+            return Result.error("请求体缺少 courseId", code=400)
+        course_id = data['courseId']
+        course = Course.query.get(course_id)
+        if not course: return Result.error("课程不存在", code=404)
+        if course in user.enrolled_courses: return Result.error("您已选修此课程", code=400)
+        # Append using the relationship
+        user.enrolled_courses.append(course)
         db.session.commit()
-
         return Result.success(message="选课成功")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error selecting course {data.get('courseId')} for student {student_id}: {e}")
+        traceback.print_exc()
+        return Result.error(f"选课失败: {str(e)}")
+
+@student_course_bp.route('/join', methods=['POST'])
+@jwt_required()
+def join_course_route():
+    # Implement specific join logic if needed, otherwise it might be the same as select
+    return select_course_for_student() # Or custom logic
+
+@student_course_bp.route('/<int:course_id>/leave', methods=['POST'])
+@jwt_required()
+def leave_course_route(course_id):
+    """Allows the logged-in student to leave/unenroll from a course."""
+    try:
+        student_id = int(get_jwt_identity())
+        user = User.query.get(student_id)
+        if not user or user.role != '学生':
+            return Result.error("用户无效或非学生", code=403)
+
+        course = Course.query.get(course_id)
+        if not course:
+            return Result.error("课程不存在", code=404)
+
+        # Check if enrolled before trying to remove
+        if course not in user.enrolled_courses:
+            return Result.error("您未选修此课程", code=400)
+
+        # Remove using the relationship
+        user.enrolled_courses.remove(course)
+        db.session.commit()
+        return Result.success(message="退课成功")
 
     except Exception as e:
-        print(f"Select course error: {str(e)}")
-        return Result.error("选课失败")
-
+        db.session.rollback()
+        current_app.logger.error(f"Error leaving course {course_id} for student {student_id}: {e}")
+        traceback.print_exc()
+        return Result.error(f"退课失败: {str(e)}")
 
 @student_attendance_bp.route('/active', methods=['GET'])
 @jwt_required()
@@ -358,7 +410,7 @@ def submit_attendance_record():
             image_file = request.files['face_image']
         else:
             image_file = request.files['image']
-        
+
         if not image_file:
             return Result.error('人脸图像无效', code=400)
 
@@ -380,7 +432,7 @@ def submit_attendance_record():
             if not face_locations:
                 # 未检测到人脸，可以删除已上传的图片
                 os.remove(image_path)
-                return Result.error('未检测到人脸，请确保人脸清晰可见', code=400)
+                return Result.error('未检测到人脸，请确保人脸清晰可见以及确保已上传人脸照片', code=400)
 
             if len(face_locations) > 1:
                 # 检测到多个人脸，可以删除已上传的图片
@@ -428,20 +480,20 @@ def submit_attendance_record():
 
             # 判断人脸识别是否通过
             is_face_valid = match_results[0] and distance <= 0.35
-            
+
             # 如果人脸识别失败，检查今天失败的次数
             if not is_face_valid:
                 # 获取今天的日期范围
                 today = datetime.now().date()
                 today_start = datetime.combine(today, datetime.min.time())
                 today_end = datetime.combine(today, datetime.max.time())
-                
+
                 # 改用更可靠的方式来跟踪失败尝试 - 使用单独的临时表或使用文件缓存
                 # 临时解决方案：使用缓存文件在服务器端存储失败尝试
                 cache_dir = os.path.join(current_app.root_path, 'temp')
                 os.makedirs(cache_dir, exist_ok=True)
                 cache_file = os.path.join(cache_dir, f"face_attempts_{current_user_id}_{task_id}.txt")
-                
+
                 # 读取已有的失败尝试
                 attempt_filenames = []
                 if os.path.exists(cache_file):
@@ -450,14 +502,14 @@ def submit_attendance_record():
                             attempt_filenames = [line.strip() for line in f.readlines()]
                     except Exception as e:
                         print(f"读取缓存文件失败: {str(e)}")
-                
+
                 # 当前尝试添加到列表
                 attempt_filenames.append(filename)
-                
+
                 # 获取真正的失败次数
                 total_failures = len(attempt_filenames)
                 print(f"用户 {current_user_id} 任务 {task_id} 已有 {total_failures} 次人脸识别失败尝试")
-                
+
                 # 如果总失败次数 < 3，保存这次尝试并返回错误提示
                 if total_failures < 3:
                     # 保存最新的尝试列表
@@ -467,7 +519,7 @@ def submit_attendance_record():
                                 f.write(f"{name}\n")
                     except Exception as e:
                         print(f"保存缓存文件失败: {str(e)}")
-                    
+
                     return Result.error(
                         message=f'人脸识别未通过，请重试。这是第 {total_failures} 次尝试，连续 3 次失败将记录为异常签到',
                         code=400
@@ -475,10 +527,10 @@ def submit_attendance_record():
                 else:
                     # 如果已经有2次失败，这次是第3次，创建一个异常签到记录
                     status = '异常'
-                    
+
                     # 使用最后一次失败（当前）的图片
                     final_image = filename
-                    
+
                     # 成功创建异常记录后，删除缓存文件
                     try:
                         os.remove(cache_file)
@@ -487,13 +539,13 @@ def submit_attendance_record():
             else:
                 # 人脸识别通过，设置签到状态
                 status = '正常'
-                
+
                 # 检查是否迟到
                 if current_time > task.start_time + (task.end_time - task.start_time) * 0.5:
                     status = '迟到'
-                
+
                 final_image = filename
-                
+
                 # 如果有缓存文件，删除它
                 cache_file = os.path.join(current_app.root_path, 'temp', f"face_attempts_{current_user_id}_{task_id}.txt")
                 if os.path.exists(cache_file):
@@ -505,7 +557,7 @@ def submit_attendance_record():
             # 获取地理位置
             location_lat = request.form.get('location_lat', 0)
             location_lng = request.form.get('location_lng', 0)
-            
+
             # 创建正式签到记录 - 注意这里不再使用check_in_type而是使用status
             if is_face_valid or total_failures >= 3:
                 record = AttendanceRecord(
@@ -520,21 +572,21 @@ def submit_attendance_record():
                     review_status='未申诉' if status != '异常' else '待审核',
                     appeal_reason="系统自动申诉: 连续三次人脸识别失败" if status == '异常' else None
                 )
-                
+
                 db.session.add(record)
                 db.session.commit()
-                
+
                 response_data = {
                     'status': status,
                     'recordId': record.id if status == '异常' else None,
                     'message': '签到成功' if status != '异常' else '人脸识别异常，已自动提交申诉'
                 }
-                
+
                 return Result.success(
                     data=response_data,
                     message='签到已记录，但人脸识别异常，已自动提交申诉' if status == '异常' else '签到成功'
                 )
-            
+
             # 理论上代码不会执行到这里
             return Result.error("未知错误，请重试", code=500)
 

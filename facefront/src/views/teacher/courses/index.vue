@@ -91,7 +91,16 @@
 </template>
 
 <script>
-import { createCourse, getCourses, updateCourse, deleteCourse } from '@/api/course'
+import {
+  getTeacherCourses,
+  createCourse,
+  updateCourse,
+  deleteCourse,
+  getCourseStudents,
+  addStudentToCourse,
+  removeStudentFromCourse
+} from '@/api/course'
+import { getAllUsers } from '@/api/user'
 
 export default {
   name: 'TeacherCourses',
@@ -127,22 +136,24 @@ export default {
   },
   methods: {
     async fetchCourses() {
+      this.loading = true
       try {
-        this.listLoading = true
-        const response = await getCourses(this.listQuery)
-        console.log(response)
+        const response = await getTeacherCourses({
+          // page: this.currentPage,
+          // limit: this.pageSize,
+          // search: this.searchQuery
+        })
         if (response.code === 200) {
-          const { data } = response
-          this.courseList = data.items
-          this.total = data.total
+          this.courseList = response.data.items
+          // this.totalCourses = response.data.total // 如果后端返回总数
         } else {
           this.$message.error(response.message || '获取课程列表失败')
         }
       } catch (error) {
         console.error('获取课程列表失败:', error)
-        this.$message.error(error.message || '获取课程列表失败')
+        this.$message.error('获取课程列表失败')
       } finally {
-        this.listLoading = false
+        this.loading = false
       }
     },
     handleFilter() {
@@ -191,17 +202,43 @@ export default {
     async handleSubmit() {
       try {
         await this.$refs.courseForm.validate()
+
+        // --- DEBUGGING: Log the data being sent ---
+        console.log('Submitting Course Form Data:', JSON.stringify(this.courseForm, null, 2));
+        // --- END DEBUGGING ---
+
         if (this.courseForm.courseId) {
+          // Update logic - ensure updateCourse API call is correct
           await updateCourse(this.courseForm.courseId, this.courseForm)
           this.$message.success('更新成功')
         } else {
-          await createCourse(this.courseForm)
-          this.$message.success('新建课程成功')
+          // Create logic
+          const response = await createCourse(this.courseForm) // Call createCourse API
+          // Check backend response structure
+          if (response.code === 200) {
+             this.$message.success(response.message || '新建课程成功')
+          } else {
+             this.$message.error(response.message || '新建课程失败')
+             // Keep dialog open on failure?
+             return; // Prevent closing dialog if needed
+          }
         }
         this.dialogVisible = false
-        this.fetchCourses()
+        this.fetchCourses() // Refresh list
       } catch (error) {
-        console.error('保存课程失败:', error)
+        // Log the detailed error from the API call if it's an Axios error
+        if (error.response) {
+          console.error('保存课程失败 - Response:', error.response.data);
+          this.$message.error(`保存课程失败: ${error.response.data.message || '服务器错误'}`);
+        } else if (error.request) {
+           console.error('保存课程失败 - No Response:', error.request);
+           this.$message.error('保存课程失败: 未收到服务器响应');
+        } else {
+           console.error('保存课程失败 - Request Setup Error:', error.message);
+           this.$message.error(`保存课程失败: ${error.message}`);
+        }
+        // Don't log generic error message if already handled above
+        // console.error('保存课程失败:', error)
       }
     }
   }

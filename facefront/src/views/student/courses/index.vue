@@ -15,23 +15,31 @@
       </div>
 
       <el-tabs v-model="activeTab" @tab-click="handleTabChange">
-        <el-tab-pane label="我的课程" name="myCourses">
-          <el-table :data="courseList" v-loading="loading">
-            <el-table-column label="课程名称" prop="courseName" />
-            <el-table-column label="教师" prop="teacherName" />
-            <el-table-column label="学期" prop="semester" />
-            <el-table-column label="上课时间" prop="classTime" />
-            <el-table-column label="上课地点" prop="location" />
+        <el-tab-pane label="我的课程" name="enrolled">
+          <el-table :data="enrolledCourses" v-loading="loading" empty-text="暂无数据">
+            <el-table-column prop="courseName" label="课程名称"></el-table-column>
+            <el-table-column prop="teacherName" label="教师"></el-table-column>
+            <el-table-column prop="semester" label="学期"></el-table-column>
+            <el-table-column label="上课时间">
+              <template slot-scope="scope">
+                {{ scope.row.startTime || '--' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="location" label="上课地点"></el-table-column>
           </el-table>
         </el-tab-pane>
 
-        <el-tab-pane label="选课" name="selectCourse">
-          <el-table :data="availableCourseList" v-loading="loading">
-            <el-table-column label="课程名称" prop="courseName" />
-            <el-table-column label="教师" prop="teacherName" />
-            <el-table-column label="学期" prop="semester" />
-            <el-table-column label="上课时间" prop="classTime" />
-            <el-table-column label="上课地点" prop="location" />
+        <el-tab-pane label="选课" name="available">
+          <el-table :data="availableCourses" v-loading="loading" empty-text="暂无可选课程">
+            <el-table-column prop="courseName" label="课程名称"></el-table-column>
+            <el-table-column prop="teacherName" label="教师"></el-table-column>
+            <el-table-column prop="semester" label="学期"></el-table-column>
+            <el-table-column label="上课时间">
+              <template slot-scope="scope">
+                {{ scope.row.startTime || '--' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="location" label="上课地点"></el-table-column>
             <el-table-column label="操作">
               <template #default="scope">
                 <el-button 
@@ -59,9 +67,9 @@ export default {
   data() {
     return {
       searchQuery: '',
-      activeTab: 'myCourses',
-      courseList: [],
-      availableCourseList: [],
+      activeTab: 'enrolled',
+      enrolledCourses: [],
+      availableCourses: [],
       loading: false
     }
   },
@@ -70,30 +78,69 @@ export default {
   },
   methods: {
     async fetchData() {
-      this.loading = true
+      this.loading = true;
+      // --- Prepare query parameters ---
+      const queryParams = {
+        search: this.searchQuery // Add search query
+        // Add pagination params here if needed later:
+        // page: this.currentPage,
+        // limit: this.pageSize
+      };
+      // --- End Prepare query parameters ---
+
       try {
-        if (this.activeTab === 'myCourses') {
-          const response = await getStudentCourses()
-          if (response.code === 200) {
-            this.courseList = response.data.items
+        let response;
+        console.log("Fetching data for tab:", this.activeTab, "with params:", queryParams);
+
+        if (this.activeTab === 'enrolled') {
+          // --- Pass queryParams to API call ---
+          response = await getStudentCourses(queryParams);
+        } else { // 'available' tab
+          // --- Pass queryParams to API call ---
+          response = await getAvailableCourses(queryParams);
+        }
+
+        console.log("Raw API Response:", JSON.stringify(response));
+
+        if (response && response.code === 200) {
+          const courses = response.data; // Assuming backend returns just the array now
+          console.log("Extracted Courses:", JSON.stringify(courses));
+
+          if (!Array.isArray(courses)) {
+             console.error("API did not return an array for courses!");
+             this.$message.error('获取课程数据格式错误');
+             this.enrolledCourses = [];
+             this.availableCourses = [];
+             return;
+          }
+
+          if (this.activeTab === 'enrolled') {
+            this.enrolledCourses = courses;
+            console.log("Updated enrolledCourses:", this.enrolledCourses);
+          } else {
+            this.availableCourses = courses;
+            console.log("Updated availableCourses:", this.availableCourses);
           }
         } else {
-          const response = await getAvailableCourses()
-          if (response.code === 200) {
-            this.availableCourseList = response.data.items
-          }
+          this.$message.error(`获取课程列表失败: ${  response ? response.message : '未知错误'}`);
+          this.enrolledCourses = [];
+          this.availableCourses = [];
         }
       } catch (error) {
-        console.error('获取课程列表失败:', error)
-        this.$message.error('获取课程列表失败')
+        console.error('获取课程列表失败:', error);
+        this.$message.error(`获取课程列表失败: ${  error.message}`);
+        this.enrolledCourses = [];
+        this.availableCourses = [];
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
     handleTabChange() {
+      // Reset search when changing tabs? Optional.
+      // this.searchQuery = '';
       this.fetchData()
     },
-    handleFilter() {
+    handleFilter() { // This method now correctly triggers fetchData which uses searchQuery
       this.fetchData()
     },
     async handleSelect(course) {

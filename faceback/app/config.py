@@ -11,7 +11,7 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY')  # 应用密钥
     SQLALCHEMY_TRACK_MODIFICATIONS = False  # 禁用 SQLAlchemy 对象修改追踪
 
-    CORS_ORIGINS = os.getenv('CORS_ORIGINS')
+    CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:8085').split(',')
 
 
 

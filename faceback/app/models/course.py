@@ -36,3 +36,19 @@ class Course(db.Model):
             '20:00': '21:30'
         }
         return time_mapping.get(start_time_str)
+    def to_dict(self):
+        """Returns a dictionary representation of the Course object."""
+        teacher_name = self.teacher.real_name if self.teacher else "N/A"
+
+        return {
+            'courseId': self.course_id,
+            'courseName': self.course_name,
+            'teacherId': self.teacher_id,
+            'teacherName': teacher_name,
+            'semester': self.semester,
+            'description': self.description,
+            'startTime': self.start_time.strftime('%H:%M') if self.start_time else None,
+            'endTime': self.end_time.strftime('%H:%M') if self.end_time else None,
+            'location': self.location,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+        }

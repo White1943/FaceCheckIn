@@ -14,6 +14,9 @@ import numpy as np
 from io import BytesIO
 from PIL import Image
 import face_recognition
+from app.models.course_students import CourseStudents
+from sqlalchemy import func, case
+import traceback
 
 
 @teacher_attendance_bp.route('/tasks', methods=['POST'])
@@ -143,23 +146,36 @@ def get_tasks():
 @teacher_attendance_bp.route('/tasks/<int:task_id>/end', methods=['PUT'])
 @jwt_required()
 def end_task(task_id):
+    """Ends an active attendance task."""
     try:
-        user_id = int(get_jwt_identity())
-        task = AttendanceTask.query.get_or_404(task_id)
+        teacher_id = int(get_jwt_identity())
+        task = AttendanceTask.query.get(task_id)
 
-        # 验证权限
-        if task.teacher_id != user_id:
-            return Result.error("无权结束此签到任务", code=403)
+        if not task:
+            return Result.error("签到任务不存在", code=404)
 
-        # 更新状态
+        # Verify teacher ownership
+        if task.teacher_id != teacher_id:
+            current_app.logger.warning(f"Teacher {teacher_id} attempted to end task {task_id} owned by {task.teacher_id}")
+            return Result.error("无权操作此签到任务", code=403)
+
+        if task.status != 'active':
+            return Result.error(f"签到任务状态为 '{task.status}'，无法结束", code=400)
+
+        # Update task status
         task.status = 'ended'
-        db.session.commit()
+        # Optionally, set the actual end time if it wasn't set automatically
+        # task.end_time = datetime.now()
 
-        return Result.success(message="签到任务已结束")
+        db.session.commit()
+        current_app.logger.info(f"Teacher {teacher_id} ended attendance task {task_id}")
+        return Result.success(message="签到已成功结束")
 
     except Exception as e:
-        print(f"End attendance task error: {str(e)}")
-        return Result.error("结束签到任务失败")
+        db.session.rollback()
+        current_app.logger.error(f"Error ending attendance task {task_id}: {e}")
+        traceback.print_exc()
+        return Result.error(f"结束签到失败: {str(e)}")
 
 # 获取签到详情
 @teacher_attendance_bp.route('/tasks/<int:task_id>/records', methods=['GET'])
@@ -647,3 +663,142 @@ def review_appeal(record_id):
         db.session.rollback()
         print(f"审核申诉失败: {str(e)}")
         return Result.error(f'审核申诉失败: {str(e)}', code=500)
+
+# --- New Statistics Endpoints ---
+
+@teacher_attendance_bp.route('/stats/course-rates', methods=['GET'])
+@jwt_required()
+def get_course_attendance_rates():
+    """
+    获取教师授课课程的签到任务签到率统计
+    Query Params:
+        courseId (optional): 筛选特定课程的ID
+    """
+    try:
+        teacher_id = get_jwt_identity()
+        course_id_filter = request.args.get('courseId')
+
+        # Base query for tasks created by the teacher
+        query = db.session.query(
+            AttendanceTask.task_id,
+            AttendanceTask.start_time,
+            Course.course_name
+        ).join(Course, AttendanceTask.course_id == Course.course_id).filter(
+            AttendanceTask.teacher_id == teacher_id
+        )
+
+        if course_id_filter:
+            query = query.filter(AttendanceTask.course_id == course_id_filter)
+
+        tasks = query.order_by(AttendanceTask.start_time.desc()).all()
+
+        results = []
+        for task_data in tasks:
+            task_id, start_time, course_name = task_data
+
+            # Get total students enrolled in the course for this task
+            total_students = db.session.query(func.count(CourseStudents.student_id)).filter(
+                CourseStudents.course_id == AttendanceTask.query.get(task_id).course_id
+            ).scalar() or 0
+
+            if total_students == 0:
+                attendance_rate = 0.0
+            else:
+                # Count checked-in students (Normal, Late, Abnormal)
+                checked_in_count = db.session.query(func.count(AttendanceRecord.id)).filter(
+                    AttendanceRecord.task_id == task_id,
+                    AttendanceRecord.status.in_(['正常', '迟到', '异常'])
+                ).scalar() or 0
+                attendance_rate = round((checked_in_count / total_students) * 100, 2) if total_students > 0 else 0
+
+            results.append({
+                'taskId': task_id,
+                'courseName': course_name,
+                'date': start_time.strftime('%Y-%m-%d %H:%M'),
+                'attendanceRate': attendance_rate,
+                'totalStudents': total_students,
+                'checkedInCount': checked_in_count
+            })
+
+        return Result.success(data={'items': results})
+
+    except Exception as e:
+        print(f"获取课程签到率统计失败: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Result.error("获取课程签到率统计失败")
+
+
+@teacher_attendance_bp.route('/stats/task-details/<int:task_id>', methods=['GET'])
+@jwt_required()
+def get_task_attendance_details(task_id):
+    """
+    获取指定签到任务下所有学生的签到详情
+    """
+    try:
+        teacher_id = get_jwt_identity()
+
+        # Verify task exists and teacher has permission
+        task = db.session.query(AttendanceTask).filter(
+            AttendanceTask.task_id == task_id,
+            AttendanceTask.teacher_id == teacher_id
+        ).first_or_404("签到任务不存在或无权限访问")
+
+        # Get all students enrolled in the course
+        enrolled_students = db.session.query(
+            User.user_id, User.real_name
+        ).join(CourseStudents, User.user_id == CourseStudents.student_id).filter(
+            CourseStudents.course_id == task.course_id
+        ).all()
+
+        # Get attendance records for this task
+        records = db.session.query(
+            AttendanceRecord.student_id,
+            AttendanceRecord.status,
+            AttendanceRecord.check_in_time,
+            AttendanceRecord.face_image # Include face image for potential display
+        ).filter(
+            AttendanceRecord.task_id == task_id
+        ).all()
+
+        # Create a dictionary for quick lookup of records
+        records_dict = {record.student_id: record for record in records}
+
+        results = []
+        current_time = datetime.now()
+
+        for student_id, student_name in enrolled_students:
+            record = records_dict.get(student_id)
+            status = '缺课' # Default status
+            check_in_time_str = None
+            face_image_url = None
+
+            if record:
+                status = record.status
+                check_in_time_str = record.check_in_time.strftime('%Y-%m-%d %H:%M:%S') if record.check_in_time else None
+                face_image_url = f'/uploads/attendance/{record.face_image}' if record.face_image else None
+            elif task.status == 'active' and current_time < task.end_time:
+                 # If task is still active and student hasn't checked in, mark as '未签到' instead of '缺课'
+                 status = '未签到'
+
+
+            results.append({
+                'studentId': student_id,
+                'studentName': student_name,
+                'status': status,
+                'checkInTime': check_in_time_str,
+                'faceImageUrl': face_image_url
+            })
+
+        # Sort results by student name or ID if needed
+        results.sort(key=lambda x: x['studentName'])
+
+        return Result.success(data={'items': results, 'taskName': task.course.course_name + " - " + task.start_time.strftime('%Y-%m-%d %H:%M')})
+
+    except Exception as e:
+        print(f"获取任务签到详情失败: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Result.error("获取任务签到详情失败")
+
+# --- End of New Statistics Endpoints ---

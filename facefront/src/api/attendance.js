@@ -112,3 +112,24 @@ export function reviewAppeal(recordId, data) {
     data
   })
 }
+
+// --- New Statistics API Functions ---
+
+// 获取教师课程签到率统计
+export function getCourseAttendanceRates(params) {
+  return request({
+    url: '/api/teacher/attendance/stats/course-rates',
+    method: 'get',
+    params // Pass courseId filter if needed
+  })
+}
+
+// 获取指定任务的学生签到详情
+export function getTaskAttendanceDetails(taskId) {
+  return request({
+    url: `/api/teacher/attendance/stats/task-details/${taskId}`,
+    method: 'get'
+  })
+}
+
+// --- End of New Statistics API Functions ---

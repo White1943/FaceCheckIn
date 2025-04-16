@@ -306,41 +306,34 @@ export const asyncRoutes = [
   {
     path: '/teacher',
     component: Layout,
-    redirect: 'noRedirect',
-    name: 'TeacherManage',
-    meta: { 
-      title: '教师端',
-      icon: 'chalkboard-teacher',
-      permissions: ['admin', 'teacher']  // 管理员和教师可访问
-    },
+    redirect: '/teacher/courses',
+    meta: { title: '教师功能', icon: 'book', roles: ['教师'] ,permissions: ['admin', 'teacher']},
     children: [
       {
         path: 'courses',
         name: 'TeacherCourses',
         component: () => import('@/views/teacher/courses/index'),
-        meta: {
-          title: '课程管理',
-          permissions: ['admin', 'teacher']
-        },
+        meta: { title: '我的课程', icon: 'list-alt' }
       },
       {
         path: 'attendance',
         name: 'TeacherAttendance',
         component: () => import('@/views/teacher/attendance/index'),
-        meta: {
-          title: '考勤管理',
-          permissions: ['admin', 'teacher']
-        },
+        meta: { title: '签到管理', icon: 'check-square' }
       },
       {
-        path: 'appeals',
+        path: 'attendance/appeals',
         name: 'TeacherAppeals',
         component: () => import('@/views/teacher/attendance/appeals'),
-        meta: {
-          title: '申诉管理',
-          permissions: ['admin', 'teacher']
-        },
-      }
+        meta: { title: '申诉审核', icon: 'gavel' }
+      },
+      {
+        path: 'statistics/rates',
+        name: 'TeacherCourseRates',
+        component: () => import('@/views/teacher/statistics/CourseRates'),
+        meta: { title: '签到率统计', icon: 'chart-bar' }
+      },
+      
     ]
   },
   {
