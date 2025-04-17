@@ -18,6 +18,15 @@
               :value="course.courseId"
             />
           </el-select>
+          <el-button
+            type="success"
+            icon="el-icon-download"
+            @click="handleExport"
+            :disabled="loading || chartData.length === 0"
+            style="margin-left: 10px;"
+          >
+            导出数据
+          </el-button>
           <el-button type="primary" icon="el-icon-refresh" @click="fetchRates">刷新</el-button>
         </div>
       </div>
@@ -44,6 +53,7 @@
 import { getCourseAttendanceRates } from '@/api/attendance'
 import { getTeacherCourses } from '@/api/course' // Assuming you have this API
 import * as echarts from 'echarts'
+import * as XLSX from 'xlsx'
 
 export default {
   name: 'CourseRatesStatistics',
@@ -191,6 +201,52 @@ export default {
     resizeChart() {
       if (this.chartInstance) {
         this.chartInstance.resize()
+      }
+    },
+    handleExport() {
+      if (this.chartData.length === 0) {
+        this.$message.warning('没有数据可以导出');
+        return;
+      }
+
+      try {
+        // 1. Prepare data for worksheet
+        const dataToExport = this.chartData.map(item => ({
+          '课程名称': item.courseName,
+          '任务时间': item.date, // Keep original date format from data
+          '签到率 (%)': item.attendanceRate,
+          '已签人数': item.checkedInCount,
+          '应签人数': item.totalStudents
+        }));
+
+        // 2. Create worksheet from JSON data
+        //    Headers are automatically derived from the keys of the first object
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+        // Optional: Adjust column widths (example)
+        // worksheet['!cols'] = [
+        //   { wch: 30 }, // Course Name
+        //   { wch: 15 }, // Task Date
+        //   { wch: 15 }, // Rate
+        //   { wch: 10 }, // Checked In
+        //   { wch: 10 }  // Total
+        // ];
+
+        // 3. Create a new workbook
+        const workbook = XLSX.utils.book_new();
+
+        // 4. Append the worksheet to the workbook
+        XLSX.utils.book_append_sheet(workbook, worksheet, '课程签到率'); // Sheet name
+
+        // 5. Generate and trigger download
+        const fileName = `课程签到率统计_${new Date().toLocaleDateString()}.xlsx`;
+        XLSX.writeFile(workbook, fileName);
+
+        this.$message.success('数据导出成功！');
+
+      } catch (error) {
+        console.error('导出Excel失败:', error);
+        this.$message.error('导出数据时发生错误，请查看控制台');
       }
     }
   }

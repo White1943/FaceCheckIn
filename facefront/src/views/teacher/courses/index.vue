@@ -32,11 +32,11 @@
           </template>
         </el-table-column>
         <el-table-column label="上课地点" prop="location" />
-        <el-table-column label="操作" width="200">
-          <template #default="scope">
+        <el-table-column label="操作" width="250">
+          <template slot-scope="scope">
             <el-button type="text" @click="handleEdit(scope.row)">编辑</el-button>
-            <el-button type="text" @click="handleDelete(scope.row)">删除</el-button>
             <el-button type="text" @click="handleStudents(scope.row)">学生管理</el-button>
+            <el-button type="text" style="color: #f56c6c" @click="handleDelete(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -197,7 +197,8 @@ export default {
       }
     },
     handleStudents(row) {
-      this.$router.push(`/teacher/courses/${row.courseId}/students`)
+      console.log('Navigating to student management for course:', row.courseId);
+      this.$router.push({ name: 'TeacherCourseStudents', params: { courseId: row.courseId } });
     },
     async handleSubmit() {
       try {
@@ -208,25 +209,20 @@ export default {
         // --- END DEBUGGING ---
 
         if (this.courseForm.courseId) {
-          // Update logic - ensure updateCourse API call is correct
           await updateCourse(this.courseForm.courseId, this.courseForm)
           this.$message.success('更新成功')
         } else {
-          // Create logic
-          const response = await createCourse(this.courseForm) // Call createCourse API
-          // Check backend response structure
+          const response = await createCourse(this.courseForm) 
           if (response.code === 200) {
              this.$message.success(response.message || '新建课程成功')
           } else {
              this.$message.error(response.message || '新建课程失败')
-             // Keep dialog open on failure?
-             return; // Prevent closing dialog if needed
+             return; 
           }
         }
         this.dialogVisible = false
         this.fetchCourses() // Refresh list
       } catch (error) {
-        // Log the detailed error from the API call if it's an Axios error
         if (error.response) {
           console.error('保存课程失败 - Response:', error.response.data);
           this.$message.error(`保存课程失败: ${error.response.data.message || '服务器错误'}`);
@@ -237,8 +233,6 @@ export default {
            console.error('保存课程失败 - Request Setup Error:', error.message);
            this.$message.error(`保存课程失败: ${error.message}`);
         }
-        // Don't log generic error message if already handled above
-        // console.error('保存课程失败:', error)
       }
     }
   }

@@ -56,7 +56,7 @@ export function deleteCourse(courseId) {
 // 获取课程详情 (通用 - Adjust URL if needed)
 export function getCourseDetails(courseId) {
   return request({
-    url: `/api/courses/${courseId}`, // Assuming this might be a different blueprint/prefix
+    url: `/api/course/teacher/courses/${courseId}`, // Adjust if URL is different
     method: 'get',
   })
 }
@@ -64,7 +64,7 @@ export function getCourseDetails(courseId) {
 // 获取课程学生列表 (教师)
 export function getCourseStudents(courseId, params) {
   return request({
-    url: `/api/course/teacher/courses/${courseId}/students`, // <--- CORRECTED URL
+    url: `/api/course/teacher/courses/${courseId}/students`,
     method: 'get',
     params,
   })
@@ -82,7 +82,7 @@ export function addStudentToCourse(courseId, data) {
 // 从课程移除学生 (教师)
 export function removeStudentFromCourse(courseId, studentId) {
   return request({
-    url: `/api/course/teacher/courses/${courseId}/students/${studentId}`, // <--- CORRECTED URL
+    url: `/api/course/teacher/courses/${courseId}/students/${studentId}`,
     method: 'delete',
   })
 }

@@ -190,3 +190,97 @@ def delete_course(course_id):
         current_app.logger.error(f"Unexpected error in delete_course: {e}")
         traceback.print_exc()
         return Result.error(f"删除课程时发生意外错误: {str(e)}", code=500)
+
+@course_bp.route('/teacher/courses/<int:course_id>/students', methods=['GET'])
+@jwt_required()
+def get_students_for_course(course_id):
+    """Fetches the list of students enrolled in a specific course."""
+    try:
+        teacher_id = int(get_jwt_identity())
+        course = Course.query.get(course_id)
+
+        if not course:
+            return Result.error("课程不存在", code=404)
+
+        # Verify teacher owns the course
+        if course.teacher_id != teacher_id:
+            return Result.error("无权查看此课程的学生", code=403)
+
+        # Access students through the relationship
+        students = course.students.all() # Get all students related to this course
+
+        # Prepare data for response, using User's to_dict()
+        student_data = []
+        for student in students:
+             # Basic student info from User model's to_dict
+             s_dict = student.to_dict()
+             # Add userId explicitly if not in to_dict
+             s_dict['userId'] = student.user_id
+             # Optionally add join date from association table if needed
+             # join_record = CourseStudents.query.filter_by(course_id=course_id, student_id=student.user_id).first()
+             # s_dict['joinDate'] = join_record.join_date.isoformat() if join_record else None
+             student_data.append(s_dict)
+
+
+        # Add pagination later if needed
+        return Result.success(data={'items': student_data, 'total': len(student_data)})
+
+    except Exception as e:
+        current_app.logger.error(f"Error fetching students for course {course_id}: {e}")
+        traceback.print_exc()
+        return Result.error("获取学生列表失败")
+
+@course_bp.route('/teacher/courses/<int:course_id>/students/<int:student_id>', methods=['DELETE'])
+@jwt_required()
+def remove_student(course_id, student_id):
+    """Removes a student from a specific course."""
+    try:
+        teacher_id = int(get_jwt_identity())
+        course = Course.query.get(course_id)
+        student = User.query.get(student_id)
+
+        if not course: return Result.error("课程不存在", code=404)
+        if not student: return Result.error("学生不存在", code=404)
+        if student.role != '学生': return Result.error("指定用户不是学生", code=400)
+
+        # Verify teacher owns the course
+        if course.teacher_id != teacher_id:
+            return Result.error("无权修改此课程的学生列表", code=403)
+
+        # Check if student is actually in the course
+        if student not in course.students:
+            return Result.error("该学生未选修此课程", code=400)
+
+        # Remove the student using the relationship
+        course.students.remove(student)
+        db.session.commit()
+        current_app.logger.info(f"Teacher {teacher_id} removed student {student_id} from course {course_id}")
+        return Result.success(message="学生已成功移除")
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error removing student {student_id} from course {course_id}: {e}")
+        traceback.print_exc()
+        return Result.error(f"移除学生失败: {str(e)}")
+
+@course_bp.route('/teacher/courses/<int:course_id>', methods=['GET'])
+@jwt_required()
+def get_single_course(course_id):
+    """Fetches details for a single course owned by the teacher."""
+    try:
+        teacher_id = int(get_jwt_identity())
+        course = Course.query.get(course_id)
+
+        if not course:
+            return Result.error("课程不存在", code=404)
+
+        # Verify teacher ownership
+        if course.teacher_id != teacher_id:
+             return Result.error("无权查看此课程", code=403)
+
+        return Result.success(data=course.to_dict())
+
+    except Exception as e:
+        current_app.logger.error(f"Error fetching course {course_id}: {e}")
+        traceback.print_exc()
+        return Result.error("获取课程详情失败")

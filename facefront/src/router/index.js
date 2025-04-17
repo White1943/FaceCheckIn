@@ -313,13 +313,20 @@ export const asyncRoutes = [
         path: 'courses',
         name: 'TeacherCourses',
         component: () => import('@/views/teacher/courses/index'),
-        meta: { title: '我的课程', icon: 'list-alt' }
+        meta: { title: '我的课程', icon: 'book-open' }
+      },
+      {
+        path: 'courses/:courseId/students',
+        name: 'TeacherCourseStudents',
+        component: () => import('@/views/teacher/courses/CourseStudents'),
+        meta: { title: '课程学生管理', noKeepAlive: true },
+        hidden: true
       },
       {
         path: 'attendance',
         name: 'TeacherAttendance',
         component: () => import('@/views/teacher/attendance/index'),
-        meta: { title: '签到管理', icon: 'check-square' }
+        meta: { title: '考勤管理', icon: 'tasks' }
       },
       {
         path: 'attendance/appeals',
