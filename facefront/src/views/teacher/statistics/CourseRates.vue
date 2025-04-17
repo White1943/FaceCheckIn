@@ -50,7 +50,7 @@
 </template>
 
 <script>
-import { getCourseAttendanceRates } from '@/api/attendance'
+import { getCourseAttendanceRates, getTaskAttendanceDetails } from '@/api/attendance'
 import { getTeacherCourses } from '@/api/course' // Assuming you have this API
 import * as echarts from 'echarts'
 import * as XLSX from 'xlsx'
@@ -60,6 +60,7 @@ export default {
   data() {
     return {
       loading: false,
+      exportLoading: false,
       chartData: [],
       teacherCourses: [],
       selectedCourseId: null,
@@ -203,43 +204,99 @@ export default {
         this.chartInstance.resize()
       }
     },
-    handleExport() {
+    async handleExport() {
       if (this.chartData.length === 0) {
         this.$message.warning('没有数据可以导出');
         return;
       }
+      if (this.exportLoading) {
+        this.$message.info('正在导出，请稍候...');
+        return;
+      }
+
+      this.exportLoading = true; // Start export loading indicator
+      this.$message.info('正在准备详细数据，请稍候...');
 
       try {
-        // 1. Prepare data for worksheet
-        const dataToExport = this.chartData.map(item => ({
+        // --- Fetch Detailed Data ---
+        const taskIds = this.chartData.map(item => item.taskId).filter(id => id != null); // Get unique task IDs
+        if (taskIds.length === 0) {
+            this.$message.error('无法导出详细数据：未找到有效的任务ID。');
+            this.exportLoading = false;
+            return;
+        }
+
+        // Fetch details for all tasks concurrently
+        const detailPromises = taskIds.map(id => getTaskAttendanceDetails(id));
+        const detailResponses = await Promise.all(detailPromises);
+
+        // --- Process Detailed Data ---
+        const checkedInData = [];
+        const absentData = [];
+
+        detailResponses.forEach((response, index) => {
+          if (response.code === 200 && response.data && response.data.items) {
+            const taskInfo = this.chartData.find(item => item.taskId === taskIds[index]) || {}; // Find corresponding task info
+            const courseName = taskInfo.courseName || '未知课程';
+            const taskDate = taskInfo.date || '未知时间';
+
+            response.data.items.forEach(student => {
+              const commonData = {
+                '课程名称': courseName,
+                '任务时间': taskDate,
+                '学生姓名': student.studentName,
+                '用户名': student.username || '-', // Assuming username is available
+              };
+
+              // Define 'checked-in' statuses
+              const checkedInStatuses = ['正常', '迟到']; // Add other statuses if needed
+
+              if (checkedInStatuses.includes(student.status)) {
+                checkedInData.push({
+                  ...commonData,
+                  '签到时间': student.checkInTime || '-',
+                  '签到状态': student.status,
+                });
+              } else { // Assume others are absent/missing
+                absentData.push({
+                  ...commonData,
+                  '状态': student.status || '未签到', // Display status or 'Not Checked In'
+                });
+              }
+            });
+          } else {
+            console.warn(`未能获取任务ID ${taskIds[index]} 的详细数据: ${response.message}`);
+            // Optionally inform user about partial data failure
+          }
+        });
+        // --- End Process Detailed Data ---
+
+
+        // --- Create Worksheets ---
+        // 1. Rates Sheet (Original)
+        const ratesDataToExport = this.chartData.map(item => ({
           '课程名称': item.courseName,
-          '任务时间': item.date, // Keep original date format from data
+          '任务时间': item.date,
           '签到率 (%)': item.attendanceRate,
           '已签人数': item.checkedInCount,
           '应签人数': item.totalStudents
         }));
+        const ratesWorksheet = XLSX.utils.json_to_sheet(ratesDataToExport);
 
-        // 2. Create worksheet from JSON data
-        //    Headers are automatically derived from the keys of the first object
-        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        // 2. Checked-in Sheet
+        const checkedInWorksheet = XLSX.utils.json_to_sheet(checkedInData);
 
-        // Optional: Adjust column widths (example)
-        // worksheet['!cols'] = [
-        //   { wch: 30 }, // Course Name
-        //   { wch: 15 }, // Task Date
-        //   { wch: 15 }, // Rate
-        //   { wch: 10 }, // Checked In
-        //   { wch: 10 }  // Total
-        // ];
+        // 3. Absent Sheet
+        const absentWorksheet = XLSX.utils.json_to_sheet(absentData);
 
-        // 3. Create a new workbook
+        // --- Create Workbook and Add Sheets ---
         const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, ratesWorksheet, '课程签到率'); // Sheet 1
+        XLSX.utils.book_append_sheet(workbook, checkedInWorksheet, '已签到学生'); // Sheet 2
+        XLSX.utils.book_append_sheet(workbook, absentWorksheet, '未签到学生'); // Sheet 3
 
-        // 4. Append the worksheet to the workbook
-        XLSX.utils.book_append_sheet(workbook, worksheet, '课程签到率'); // Sheet name
-
-        // 5. Generate and trigger download
-        const fileName = `课程签到率统计_${new Date().toLocaleDateString()}.xlsx`;
+        // --- Generate and Trigger Download ---
+        const fileName = `课程签到统计_${this.selectedCourseId ? this.teacherCourses.find(c=>c.courseId === this.selectedCourseId)?.courseName || this.selectedCourseId : '所有课程'}_${new Date().toLocaleDateString()}.xlsx`;
         XLSX.writeFile(workbook, fileName);
 
         this.$message.success('数据导出成功！');
@@ -247,6 +304,8 @@ export default {
       } catch (error) {
         console.error('导出Excel失败:', error);
         this.$message.error('导出数据时发生错误，请查看控制台');
+      } finally {
+        this.exportLoading = false; // Stop export loading indicator
       }
     }
   }
@@ -262,5 +321,10 @@ export default {
     justify-content: space-between;
     align-items: center;
   }
+}
+
+/* Optional: Style for button when export is loading */
+.el-button:disabled {
+  cursor: not-allowed;
 }
 </style> 

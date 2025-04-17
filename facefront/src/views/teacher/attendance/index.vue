@@ -384,6 +384,18 @@ export default {
         this.$message.error('获取教师课程列表失败');
       }
     },
+    handleViewDetails(taskId) {
+      // Ensure this method exists and is called by the button's @click
+      console.log("Navigating to details for task:", taskId);
+      if (!taskId) {
+          console.error("handleViewDetails called without taskId");
+          this.$message.error('无法查看详情：任务ID无效');
+          return;
+      }
+      // --- Verify this navigation call ---
+      this.$router.push({ name: 'TeacherTaskDetails', params: { taskId: taskId } });
+      // --- End Verify ---
+    },
   },
   watch: {
     activeTab() {

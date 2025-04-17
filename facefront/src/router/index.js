@@ -307,7 +307,7 @@ export const asyncRoutes = [
     path: '/teacher',
     component: Layout,
     redirect: '/teacher/courses',
-    meta: { title: '教师功能', icon: 'book', roles: ['教师'] ,permissions: ['admin', 'teacher']},
+    meta: { title: '教师功能', icon: 'chalkboard-teacher', roles: ['教师'] },
     children: [
       {
         path: 'courses',
@@ -329,10 +329,18 @@ export const asyncRoutes = [
         meta: { title: '考勤管理', icon: 'tasks' }
       },
       {
+        path: 'attendance/details/:taskId',
+        name: 'TeacherTaskDetails',
+        component: () => import('@/views/teacher/attendance/TaskDetails'),
+        meta: { title: '签到详情', noKeepAlive: true },
+        hidden: true,
+        props: true
+      },
+      {
         path: 'attendance/appeals',
         name: 'TeacherAppeals',
         component: () => import('@/views/teacher/attendance/appeals'),
-        meta: { title: '申诉审核', icon: 'gavel' }
+        meta: { title: '签到申诉处理', icon: 'exclamation-circle' }
       },
       {
         path: 'statistics/rates',
@@ -340,7 +348,6 @@ export const asyncRoutes = [
         component: () => import('@/views/teacher/statistics/CourseRates'),
         meta: { title: '签到率统计', icon: 'chart-bar' }
       },
-      
     ]
   },
   {

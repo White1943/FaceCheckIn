@@ -60,15 +60,9 @@ export default {
       taskName: ''
     }
   },
-  watch: {
-    taskId: {
-      immediate: true,
-      handler(newVal) {
-        if (newVal) {
-          this.fetchDetails()
-        }
-      }
-    }
+  created() {
+    console.log('TaskDetails created with taskId prop:', this.taskId);
+    this.fetchDetails();
   },
   methods: {
     async fetchDetails() {
@@ -76,15 +70,15 @@ export default {
       this.loading = true
       try {
         const response = await getTaskAttendanceDetails(this.taskId)
-        if (response.code === 200) {
-          this.studentList = response.data.items
-          this.taskName = response.data.taskName || `任务 ${this.taskId}`
+        if (response.code === 200 && response.data) {
+          this.studentList = response.data.items || []
+          this.taskName = response.data.taskName || `任务 ${this.taskId} 详情`
         } else {
           this.$message.error(response.message || '获取签到详情失败')
         }
       } catch (error) {
         console.error('获取签到详情失败:', error)
-        this.$message.error('获取签到详情失败')
+        this.$message.error('获取签到详情时发生错误')
       } finally {
         this.loading = false
       }
