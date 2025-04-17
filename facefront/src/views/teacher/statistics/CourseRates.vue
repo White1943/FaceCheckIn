@@ -64,15 +64,15 @@ export default {
       chartData: [],
       teacherCourses: [],
       selectedCourseId: null,
-      chartInstance: null
+      chartInstance: null,
+      xAxisLabels: []
     }
   },
   async created() {
     await this.fetchTeacherCourses()
-    this.fetchRates()
+    await this.fetchRates()
   },
   mounted() {
-    this.initChart()
     window.addEventListener('resize', this.resizeChart)
   },
   beforeDestroy() {
@@ -101,28 +101,50 @@ export default {
         }
         const response = await getCourseAttendanceRates(params)
         if (response.code === 200) {
-          // Reverse the data so older tasks appear first on the chart
-          this.chartData = response.data.items.reverse()
+          this.chartData = response.data.items.reverse() || []
           this.updateChart()
         } else {
+          this.chartData = []
+          this.xAxisLabels = []
+          if (this.chartInstance) {
+             this.chartInstance.clear()
+          }
           this.$message.error(response.message || '获取签到率数据失败')
         }
       } catch (error) {
         console.error('获取签到率数据失败:', error)
+        this.chartData = []
+        this.xAxisLabels = []
+        if (this.chartInstance) {
+           this.chartInstance.clear()
+        }
         this.$message.error('获取签到率数据失败')
       } finally {
         this.loading = false
+        if (!this.chartInstance && this.$refs.chart) {
+            this.initChart()
+        } else if (this.chartInstance) {
+            this.updateChart()
+        }
       }
     },
     initChart() {
-      const chartDom = this.$refs.chart
-      if (chartDom) {
-        this.chartInstance = echarts.init(chartDom)
-        this.updateChart() // Initial empty chart setup
+      if (this.$refs.chart && !this.chartInstance) {
+        this.chartInstance = echarts.init(this.$refs.chart)
       }
     },
     updateChart() {
-      if (!this.chartInstance) return
+      if (!this.chartInstance) {
+         if (this.$refs.chart) {
+             this.initChart()
+             if (!this.chartInstance) return
+         } else {
+             console.warn("Chart DOM element not ready for update.")
+             return
+         }
+      }
+
+      this.xAxisLabels = this.chartData.map(item => `${item.date}\n${item.courseName}`)
 
       const option = {
         tooltip: {
@@ -139,10 +161,10 @@ export default {
         },
         xAxis: {
           type: 'category',
-          data: this.chartData.map(item => `${item.date  }\n${  item.courseName.substring(0, 10)}`), // Combine date and course name for label
+          data: this.xAxisLabels,
           axisLabel: {
-             interval: 0, // Show all labels
-             rotate: 15 // Rotate labels slightly if they overlap
+             interval: 0,
+             rotate: 15
           }
         },
         yAxis: {
@@ -157,17 +179,16 @@ export default {
         grid: {
           left: '3%',
           right: '4%',
-          bottom: '10%', // Increase bottom margin for rotated labels
+          bottom: '10%',
           containLabel: true
         },
         series: [
           {
             name: '签到率',
-            type: 'bar', // Or 'line'
+            type: 'bar',
             barWidth: '60%',
             data: this.chartData.map(item => ({
                 value: item.attendanceRate,
-                // Store extra data for tooltip
                 courseName: item.courseName,
                 date: item.date,
                 checkedInCount: item.checkedInCount,
@@ -183,21 +204,27 @@ export default {
             }
           }
         ],
-        dataZoom: [ // Add data zoom for better navigation with many tasks
+        dataZoom: [
           {
             type: 'slider',
-            start: 0,
-            end: 100,
-            bottom: 10
+            filterMode: 'filter',
+            bottom: 10,
+            height: 20,
+            handleSize: '80%',
+            showDetail: true,
+            labelFormatter: (value) => {
+                 if (this.xAxisLabels && this.xAxisLabels[value]) {
+                     return this.xAxisLabels[value].split('\n')[0];
+                 }
+                 return '';
+             }
           },
           {
-            type: 'inside',
-            start: 0,
-            end: 100
+            type: 'inside'
           }
         ],
       }
-      this.chartInstance.setOption(option)
+      this.chartInstance.setOption(option, true)
     },
     resizeChart() {
       if (this.chartInstance) {
@@ -205,8 +232,56 @@ export default {
       }
     },
     async handleExport() {
-      if (this.chartData.length === 0) {
-        this.$message.warning('没有数据可以导出');
+      if (!this.chartInstance) {
+          this.$message.error('图表未初始化，无法导出。');
+          return;
+      }
+
+      const currentOptions = this.chartInstance.getOption();
+      let startIndex = 0;
+      let endIndex = this.chartData.length > 0 ? this.chartData.length - 1 : 0;
+
+      if (currentOptions.dataZoom && currentOptions.dataZoom.length > 0) {
+          const sliderZoom = currentOptions.dataZoom.find(dz => dz.type === 'slider');
+
+          if (sliderZoom && typeof sliderZoom.startValue !== 'undefined' && typeof sliderZoom.endValue !== 'undefined') {
+              startIndex = Math.max(0, Math.floor(sliderZoom.startValue));
+              endIndex = Math.min(this.chartData.length - 1, Math.floor(sliderZoom.endValue));
+              console.log('Read zoom directly from chart options:', startIndex, endIndex);
+          } else {
+               console.warn('Could not find valid start/end values in chart options dataZoom. Exporting full range.');
+          }
+      } else {
+           console.warn('No dataZoom configuration found in chart options. Exporting full range.');
+      }
+
+      console.log('--- Export Triggered ---');
+      console.log('Using startIndex:', startIndex);
+      console.log('Using endIndex:', endIndex);
+      console.log('Total chartData items:', this.chartData.length);
+      if (this.xAxisLabels.length > 0 && startIndex >= 0 && endIndex < this.xAxisLabels.length && startIndex <= endIndex) {
+          console.log('Label at startIndex:', this.xAxisLabels[startIndex]);
+          console.log('Label at endIndex:', this.xAxisLabels[endIndex]);
+      } else {
+          console.warn('Cannot log labels due to invalid indices or empty labels array.');
+      }
+
+      if (startIndex < 0 || endIndex < 0 || startIndex > endIndex || startIndex >= this.chartData.length) {
+          this.$message.warning('无法导出：无效的数据范围或无数据。');
+          console.error("Invalid indices for export:", startIndex, endIndex, this.chartData.length);
+          return;
+      }
+
+      const dataInView = this.chartData.slice(startIndex, endIndex + 1);
+
+      console.log(`Sliced dataInView contains ${dataInView.length} items.`);
+      if (dataInView.length > 0) {
+          console.log('First item in view:', dataInView[0]?.date, dataInView[0]?.courseName);
+          console.log('Last item in view:', dataInView[dataInView.length - 1]?.date, dataInView[dataInView.length - 1]?.courseName);
+      }
+
+      if (dataInView.length === 0) {
+        this.$message.warning('当前选定范围内没有数据可以导出');
         return;
       }
       if (this.exportLoading) {
@@ -214,29 +289,28 @@ export default {
         return;
       }
 
-      this.exportLoading = true; // Start export loading indicator
+      this.exportLoading = true;
       this.$message.info('正在准备详细数据，请稍候...');
 
       try {
-        // --- Fetch Detailed Data ---
-        const taskIds = this.chartData.map(item => item.taskId).filter(id => id != null); // Get unique task IDs
+        const taskIds = dataInView.map(item => item.taskId).filter(id => id != null);
+        console.log('Task IDs being fetched for details:', taskIds);
+
         if (taskIds.length === 0) {
             this.$message.error('无法导出详细数据：未找到有效的任务ID。');
             this.exportLoading = false;
             return;
         }
 
-        // Fetch details for all tasks concurrently
         const detailPromises = taskIds.map(id => getTaskAttendanceDetails(id));
         const detailResponses = await Promise.all(detailPromises);
 
-        // --- Process Detailed Data ---
         const checkedInData = [];
         const absentData = [];
 
         detailResponses.forEach((response, index) => {
           if (response.code === 200 && response.data && response.data.items) {
-            const taskInfo = this.chartData.find(item => item.taskId === taskIds[index]) || {}; // Find corresponding task info
+            const taskInfo = dataInView.find(item => item.taskId === taskIds[index]) || {};
             const courseName = taskInfo.courseName || '未知课程';
             const taskDate = taskInfo.date || '未知时间';
 
@@ -245,11 +319,10 @@ export default {
                 '课程名称': courseName,
                 '任务时间': taskDate,
                 '学生姓名': student.studentName,
-                '用户名': student.username || '-', // Assuming username is available
+                '用户名': student.username || '-',
               };
 
-              // Define 'checked-in' statuses
-              const checkedInStatuses = ['正常', '迟到']; // Add other statuses if needed
+              const checkedInStatuses = ['正常', '迟到'];
 
               if (checkedInStatuses.includes(student.status)) {
                 checkedInData.push({
@@ -257,24 +330,19 @@ export default {
                   '签到时间': student.checkInTime || '-',
                   '签到状态': student.status,
                 });
-              } else { // Assume others are absent/missing
+              } else {
                 absentData.push({
                   ...commonData,
-                  '状态': student.status || '未签到', // Display status or 'Not Checked In'
+                  '状态': student.status || '未签到',
                 });
               }
             });
           } else {
             console.warn(`未能获取任务ID ${taskIds[index]} 的详细数据: ${response.message}`);
-            // Optionally inform user about partial data failure
           }
         });
-        // --- End Process Detailed Data ---
 
-
-        // --- Create Worksheets ---
-        // 1. Rates Sheet (Original)
-        const ratesDataToExport = this.chartData.map(item => ({
+        const ratesDataToExport = dataInView.map(item => ({
           '课程名称': item.courseName,
           '任务时间': item.date,
           '签到率 (%)': item.attendanceRate,
@@ -282,30 +350,31 @@ export default {
           '应签人数': item.totalStudents
         }));
         const ratesWorksheet = XLSX.utils.json_to_sheet(ratesDataToExport);
-
-        // 2. Checked-in Sheet
         const checkedInWorksheet = XLSX.utils.json_to_sheet(checkedInData);
-
-        // 3. Absent Sheet
         const absentWorksheet = XLSX.utils.json_to_sheet(absentData);
 
-        // --- Create Workbook and Add Sheets ---
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, ratesWorksheet, '课程签到率'); // Sheet 1
-        XLSX.utils.book_append_sheet(workbook, checkedInWorksheet, '已签到学生'); // Sheet 2
-        XLSX.utils.book_append_sheet(workbook, absentWorksheet, '未签到学生'); // Sheet 3
+        XLSX.utils.book_append_sheet(workbook, ratesWorksheet, '课程签到率');
+        XLSX.utils.book_append_sheet(workbook, checkedInWorksheet, '已签到学生');
+        XLSX.utils.book_append_sheet(workbook, absentWorksheet, '未签到学生');
 
-        // --- Generate and Trigger Download ---
-        const fileName = `课程签到统计_${this.selectedCourseId ? this.teacherCourses.find(c=>c.courseId === this.selectedCourseId)?.courseName || this.selectedCourseId : '所有课程'}_${new Date().toLocaleDateString()}.xlsx`;
+        const startDateStr = this.xAxisLabels[startIndex]?.split('\n')[0] || '未知开始日期';
+        const endDateStr = this.xAxisLabels[endIndex]?.split('\n')[0] || '未知结束日期';
+        const sanitizedStartDate = startDateStr.replace(/[:\s]/g, '_');
+        const sanitizedEndDate = endDateStr.replace(/[:\s]/g, '_');
+
+        const courseNamePart = this.selectedCourseId ? this.teacherCourses.find(c=>c.courseId === this.selectedCourseId)?.courseName || this.selectedCourseId : '所有课程';
+        const fileName = `课程签到统计_${courseNamePart}_${sanitizedStartDate}_至_${sanitizedEndDate}.xlsx`;
+        console.log('Generated filename:', fileName);
+
         XLSX.writeFile(workbook, fileName);
-
         this.$message.success('数据导出成功！');
 
       } catch (error) {
         console.error('导出Excel失败:', error);
         this.$message.error('导出数据时发生错误，请查看控制台');
       } finally {
-        this.exportLoading = false; // Stop export loading indicator
+        this.exportLoading = false;
       }
     }
   }
