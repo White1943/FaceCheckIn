@@ -8,8 +8,7 @@
           placeholder="搜索课程名称"
           style="width: 200px;"
           class="filter-item"
-          @keyup.enter.native="handleFilter"
-        />
+          @keyup.enter.native="handleFilter"/>
         <el-button class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
           搜索
         </el-button>
@@ -20,10 +19,9 @@
 
       <!-- 课程列表 -->
       <el-table
-        :data="courseList"
-        style="width: 100%; margin-top: 20px"
         v-loading="listLoading"
-      >
+        :data="courseList"
+        style="width: 100%; margin-top: 20px">
         <el-table-column label="课程名称" prop="courseName" />
         <el-table-column label="学期" prop="semester" />
         <el-table-column label="上课时间">
@@ -45,14 +43,13 @@
       <div class="pagination-container">
         <el-pagination
           background
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
           :current-page="listQuery.page"
           :page-sizes="[10, 20, 30, 50]"
           :page-size="listQuery.limit"
           layout="total, sizes, prev, pager, next, jumper"
           :total="total"
-        />
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"/>
       </div>
     </el-card>
 

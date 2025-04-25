@@ -37,8 +37,7 @@
           :data="tableData"
           default-expand-all
           row-key="path"
-          :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
-        >
+          :tree-props="{ children: 'children', hasChildren: 'hasChildren' }">
           <el-table-column label="name" prop="name" show-overflow-tooltip />
           <el-table-column label="path" prop="path" show-overflow-tooltip />
           <el-table-column label="component" prop="component" show-overflow-tooltip />

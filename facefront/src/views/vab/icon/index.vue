@@ -32,8 +32,7 @@
           :page-sizes="[72, 144, 216, 288]"
           :total="total"
           @current-change="handleCurrentChange"
-          @size-change="handleSizeChange"
-        />
+          @size-change="handleSizeChange"/>
       </el-col>
     </el-row>
   </div>

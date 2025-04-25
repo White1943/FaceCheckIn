@@ -9,7 +9,7 @@
         </div>
       </div>
 
-      <el-table :data="studentList" v-loading="loading" style="width: 100%">
+      <el-table v-loading="loading" :data="studentList" style="width: 100%">
         <el-table-column label="头像" width="80" align="center">
           <template slot-scope="scope">
             <el-image
@@ -36,8 +36,7 @@
              <el-button
                type="text"
                style="color: #f56c6c"
-               @click="handleRemoveStudent(scope.row)"
-             >
+               @click="handleRemoveStudent(scope.row)">
                移除
              </el-button>
            </template>
@@ -47,13 +46,13 @@
  
        <el-pagination
          style="margin-top: 20px; text-align: right;"
-         @size-change="handleSizeChange"
-         @current-change="handleCurrentChange"
          :current-page="pagination.page"
          :page-sizes="[10, 20, 50, 100]"
          :page-size="pagination.limit"
          layout="total, sizes, prev, pager, next, jumper"
-         :total="pagination.total">
+         :total="pagination.total"
+         @size-change="handleSizeChange"
+         @current-change="handleCurrentChange">
        </el-pagination>
 
     </el-card>

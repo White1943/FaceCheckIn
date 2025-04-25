@@ -12,8 +12,7 @@
             <el-input
               v-model="registerForm.username"
               placeholder="请输入用户名"
-              type="text"
-            >
+              type="text">
               <vab-icon slot="prefix" :icon="['fas', 'user']" />
             </el-input>
           </el-form-item>
@@ -22,8 +21,7 @@
             <el-input
               v-model="registerForm.password"
               placeholder="请输入密码"
-              type="password"
-            >
+              type="password">
               <vab-icon slot="prefix" :icon="['fas', 'lock']" />
             </el-input>
           </el-form-item>
@@ -32,8 +30,7 @@
             <el-input
               v-model="registerForm.confirmPassword"
               placeholder="请确认密码"
-              type="password"
-            >
+              type="password">
               <vab-icon slot="prefix" :icon="['fas', 'lock']" />
             </el-input>
           </el-form-item>
@@ -42,8 +39,7 @@
             <el-input
               v-model="registerForm.realName"
               placeholder="请输入真实姓名"
-              type="text"
-            >
+              type="text">
               <vab-icon slot="prefix" :icon="['fas', 'user']" />
             </el-input>
           </el-form-item>
@@ -60,8 +56,7 @@
             <el-input
               v-model="registerForm.email"
               placeholder="请输入邮箱（选填）"
-              type="email"
-            >
+              type="email">
               <vab-icon slot="prefix" :icon="['fas', 'envelope']" />
             </el-input>
           </el-form-item>

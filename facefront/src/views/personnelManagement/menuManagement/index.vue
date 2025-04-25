@@ -20,8 +20,7 @@
           default-expand-all
           :element-loading-text="elementLoadingText"
           row-key="path"
-          :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
-        >
+          :tree-props="{ children: 'children', hasChildren: 'hasChildren' }">
           <el-table-column label="name" prop="name" show-overflow-tooltip />
           <el-table-column label="路径" prop="path" show-overflow-tooltip />
           <el-table-column label="是否隐藏" show-overflow-tooltip>

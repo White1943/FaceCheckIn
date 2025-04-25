@@ -6,21 +6,19 @@
           v-model="selectedCourse" 
           placeholder="选择课程" 
           style="width: 200px; margin-right: 10px"
-          @change="handleCourseChange"
-        >
+          @change="handleCourseChange">
           <el-option
             v-for="course in courseList"
             :key="course.courseId"
             :label="course.courseName"
-            :value="course.courseId"
-          />
+            :value="course.courseId"/>
         </el-select>
         <el-button type="primary" @click="startAttendance">发起签到</el-button>
       </div>
 
       <el-tabs v-model="activeTab">
         <el-tab-pane label="进行中的签到" name="active">
-          <el-table :data="activeAttendanceList" v-loading="loading">
+          <el-table v-loading="loading" :data="activeAttendanceList">
             <el-table-column label="课程" prop="courseName" />
             <el-table-column label="开始时间" prop="startTime" />
             <el-table-column label="结束时间" prop="endTime" />
@@ -29,16 +27,14 @@
               <template slot-scope="scope">
                 <el-button
                   size="mini"
-                  @click="viewTaskDetails(scope.row.taskId)"
-                >
+                  @click="viewTaskDetails(scope.row.taskId)">
                   查看详情
                 </el-button>
                 <el-button
                   v-if="scope.row.status === 'active'"
                   size="mini"
                   type="danger"
-                  @click="handleEndTask(scope.row)"
-                >
+                  @click="handleEndTask(scope.row)">
                   结束签到
                 </el-button>
               </template>
@@ -47,7 +43,7 @@
         </el-tab-pane>
 
         <el-tab-pane label="历史记录" name="history">
-          <el-table :data="historyAttendanceList" v-loading="loading">
+          <el-table v-loading="loading" :data="historyAttendanceList">
             <el-table-column label="课程" prop="courseName" />
             <el-table-column label="日期" prop="date" />
             <el-table-column label="时间">
@@ -77,8 +73,7 @@
               v-for="course in courseList"
               :key="course.courseId"
               :label="course.courseName"
-              :value="course.courseId"
-            />
+              :value="course.courseId"/>
           </el-select>
         </el-form-item>
         <el-form-item label="签到时间" prop="timeRange">
@@ -86,15 +81,13 @@
             v-model="taskForm.timeRange[0]"
             format="HH:mm"
             placeholder="开始时间"
-            style="width: 180px"
-          />
+            style="width: 180px"/>
           <span style="margin: 0 10px">至</span>
           <el-time-picker
             v-model="taskForm.timeRange[1]"
             format="HH:mm"
             placeholder="结束时间"
-            style="width: 180px"
-          />
+            style="width: 180px"/>
         </el-form-item>
       </el-form>
       <div slot="footer">
@@ -125,9 +118,8 @@
             <template #default="scope">
               <el-button 
                 type="text" 
-                @click="viewStudentPhoto(scope.row)"
                 :disabled="!scope.row.faceImage"
-              >
+                @click="viewStudentPhoto(scope.row)">
                 查看照片
               </el-button>
             </template>
@@ -138,7 +130,7 @@
 
     <!-- 查看照片对话框 -->
     <el-dialog title="签到照片" :visible.sync="photoVisible" width="500px">
-      <div class="photo-container" v-if="currentPhoto">
+      <div v-if="currentPhoto" class="photo-container">
         <img :src="currentPhoto" alt="签到照片" style="width: 100%;">
       </div>
       <div v-else class="no-photo">
@@ -154,9 +146,8 @@
       :description="`系统已自动结束 ${autoEndedTasksCount} 个过期的签到任务`"
       show-icon
       :closable="true"
-      @close="clearAutoEndedNotification"
       style="margin-bottom: 15px;"
-    />
+      @close="clearAutoEndedNotification"/>
   </div>
 </template>
 
@@ -191,6 +182,11 @@ export default {
       // 新增自动结束任务计数
       autoEndedTasksCount: 0,
       teacherCourses: [], // To store courses for the dropdown
+    }
+  },
+  watch: {
+    activeTab() {
+      this.fetchAttendanceTasks()
     }
   },
   created() {
@@ -396,11 +392,6 @@ export default {
       this.$router.push({ name: 'TeacherTaskDetails', params: { taskId: taskId } });
       // --- End Verify ---
     },
-  },
-  watch: {
-    activeTab() {
-      this.fetchAttendanceTasks()
-    }
   }
 }
 </script>

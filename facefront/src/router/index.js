@@ -4,12 +4,12 @@
  */
 
 import Vue from 'vue'
-import VueRouter from 'vue-router'
+import Router from 'vue-router'
 import Layout from '@/layouts'
 import EmptyLayout from '@/layouts/EmptyLayout'
 import { publicPath, routerMode } from '@/config'
 
-Vue.use(VueRouter)
+Vue.use(Router)
 export const constantRoutes = [
   {
     path: '/login',
@@ -37,411 +37,175 @@ export const constantRoutes = [
 
 export const asyncRoutes = [
   {
-    path: '/',
-    component: Layout,
-    redirect: '/index',
-    children: [
-      {
-        path: 'index',
-        name: 'Index',
-        component: () => import('@/views/index/index'),
-        meta: {
-          title: '首页',
-          icon: 'home',
-          affix: true,
-        },
-      },
-    ],
-  },
-  /* {
-    path: "/test",
-    component: Layout,
-    redirect: "noRedirect",
-    children: [
-      {
-        path: "test",
-        name: "Test",
-        component: () => import("@/views/test/index"),
-        meta: {
-          title: "test",
-          icon: "marker",
-          permissions: ["admin"],
-        },
-      },
-    ],
-  }, */
-
-  // {
-  //   path: '/vab',
-  //   component: Layout,
-  //   redirect: 'noRedirect',
-  //   name: 'Vab',
-  //   alwaysShow: true,
-  //   meta: { title: '组件', icon: 'box-open' },
-  //   children: [
-  //     {
-  //       path: 'permissions',
-  //       name: 'Permission',
-  //       component: () => import('@/views/vab/permissions/index'),
-  //       meta: {
-  //         title: '角色权限',
-  //         permissions: ['admin', 'editor'],
-  //       },
-  //     },
-  //     {
-  //       path: 'icon',
-  //       component: EmptyLayout,
-  //       redirect: 'noRedirect',
-  //       name: 'Icon',
-  //       meta: {
-  //         title: '图标',
-  //         permissions: ['admin'],
-  //       },
-  //       children: [
-  //         {
-  //           path: 'awesomeIcon',
-  //           name: 'AwesomeIcon',
-  //           component: () => import('@/views/vab/icon/index'),
-  //           meta: { title: '常规图标' },
-  //         },
-  //         {
-  //           path: 'colorfulIcon',
-  //           name: 'ColorfulIcon',
-  //           component: () => import('@/views/vab/icon/colorfulIcon'),
-  //           meta: { title: '多彩图标' },
-  //         },
-  //       ],
-  //     },
-  //     {
-  //       path: 'table',
-  //       component: () => import('@/views/vab/table/index'),
-  //       name: 'Table',
-  //       meta: {
-  //         title: '表格',
-  //         permissions: ['admin'],
-  //       },
-  //     },
-
-  //     {
-  //       path: 'webSocket',
-  //       name: 'WebSocket',
-  //       component: () => import('@/views/vab/webSocket/index'),
-  //       meta: { title: 'webSocket', permissions: ['admin'] },
-  //     },
-  //     {
-  //       path: 'form',
-  //       name: 'Form',
-  //       component: () => import('@/views/vab/form/index'),
-  //       meta: { title: '表单', permissions: ['admin'] },
-  //     },
-  //     {
-  //       path: 'element',
-  //       name: 'Element',
-  //       component: () => import('@/views/vab/element/index'),
-  //       meta: { title: '常用组件', permissions: ['admin'] },
-  //     },
-  //     {
-  //       path: 'tree',
-  //       name: 'Tree',
-  //       component: () => import('@/views/vab/tree/index'),
-  //       meta: { title: '树', permissions: ['admin'] },
-  //     },
-  //     {
-  //       path: 'menu1',
-  //       component: () => import('@/views/vab/nested/menu1/index'),
-  //       name: 'Menu1',
-  //       alwaysShow: true,
-  //       meta: {
-  //         title: '嵌套路由 1',
-  //         permissions: ['admin'],
-  //       },
-  //       children: [
-  //         {
-  //           path: 'menu1-1',
-  //           name: 'Menu1-1',
-  //           alwaysShow: true,
-  //           meta: { title: '嵌套路由 1-1' },
-  //           component: () => import('@/views/vab/nested/menu1/menu1-1/index'),
-
-  //           children: [
-  //             {
-  //               path: 'menu1-1-1',
-  //               name: 'Menu1-1-1',
-  //               meta: { title: '嵌套路由 1-1-1' },
-  //               component: () => import('@/views/vab/nested/menu1/menu1-1/menu1-1-1/index'),
-  //             },
-  //           ],
-  //         },
-  //       ],
-  //     },
-  //     {
-  //       path: 'loading',
-  //       name: 'Loading',
-  //       component: () => import('@/views/vab/loading/index'),
-  //       meta: { title: 'loading', permissions: ['admin'] },
-  //     },
-  //     {
-  //       path: 'backToTop',
-  //       name: 'BackToTop',
-  //       component: () => import('@/views/vab/backToTop/index'),
-  //       meta: { title: '返回顶部', permissions: ['admin'] },
-  //     },
-  //     {
-  //       path: 'lodash',
-  //       name: 'Lodash',
-  //       component: () => import('@/views/vab/lodash/index'),
-  //       meta: { title: 'lodash', permissions: ['admin'] },
-  //     },
-
-  //     {
-  //       path: 'upload',
-  //       name: 'Upload',
-  //       component: () => import('@/views/vab/upload/index'),
-  //       meta: { title: '上传', permissions: ['admin'] },
-  //     },
-  //     {
-  //       path: 'log',
-  //       name: 'Log',
-  //       component: () => import('@/views/vab/errorLog/index'),
-  //       meta: { title: '错误日志模拟', permissions: ['admin'] },
-  //     },
-  //     {
-  //       path: 'https://github.com/zxwk1998/vue-admin-better/',
-  //       name: 'ExternalLink',
-  //       meta: {
-  //         title: '外链',
-  //         target: '_blank',
-  //         permissions: ['admin', 'editor'],
-  //         badge: 'New',
-  //       },
-  //     },
-  //     {
-  //       path: 'more',
-  //       name: 'More',
-  //       component: () => import('@/views/vab/more/index'),
-  //       meta: { title: '关于', permissions: ['admin'] },
-  //     },
-  //   ],
-  // },
-  // {
-  //   path: '/personnelManagement',
-  //   component: Layout,
-  //   redirect: 'noRedirect',
-  //   name: 'PersonnelManagement',
-  //   meta: { title: '配置', icon: 'users-cog', permissions: ['admin'] },
-  //   children: [
-  //     {
-  //       path: 'userManagement',
-  //       name: 'UserManagement',
-  //       component: () => import('@/views/personnelManagement/userManagement/index'),
-  //       meta: { title: '用户管理' },
-  //     },
-  //     {
-  //       path: 'roleManagement',
-  //       name: 'RoleManagement',
-  //       component: () => import('@/views/personnelManagement/roleManagement/index'),
-  //       meta: { title: '角色管理' },
-  //     },
-  //     {
-  //       path: 'menuManagement',
-  //       name: 'MenuManagement',
-  //       component: () => import('@/views/personnelManagement/menuManagement/index'),
-  //       meta: { title: '菜单管理', badge: 'New' },
-  //     },
-  //   ],
-  // },
-  // {
-  //   path: '/mall',
-  //   component: Layout,
-  //   redirect: 'noRedirect',
-  //   name: 'Mall',
-  //   meta: {
-  //     title: '商城',
-  //     icon: 'shopping-cart',
-  //     permissions: ['admin'],
-  //   },
-
-  //   children: [
-  //     {
-  //       path: 'pay',
-  //       name: 'Pay',
-  //       component: () => import('@/views/mall/pay/index'),
-  //       meta: {
-  //         title: '支付',
-  //         noKeepAlive: true,
-  //       },
-  //       children: null,
-  //     },
-  //     {
-  //       path: 'goodsList',
-  //       name: 'GoodsList',
-  //       component: () => import('@/views/mall/goodsList/index'),
-  //       meta: {
-  //         title: '商品列表',
-  //       },
-  //     },
-  //   ],
-  // },
-  // {
-  //   path: '/error',
-  //   component: EmptyLayout,
-  //   redirect: 'noRedirect',
-  //   name: 'Error',
-  //   meta: { title: '错误页', icon: 'bug' },
-  //   children: [
-  //     {
-  //       path: '401',
-  //       name: 'Error401',
-  //       component: () => import('@/views/401'),
-  //       meta: { title: '401' },
-  //     },
-  //     {
-  //       path: '404',
-  //       name: 'Error404',
-  //       component: () => import('@/views/404'),
-  //       meta: { title: '404' },
-  //     },
-  //   ],
-  // },
-  {
-    path: '/teacher',
-    component: Layout,
-    redirect: '/teacher/courses',
-    meta: { title: '教师功能', icon: 'chalkboard-teacher', roles: ['教师'], permissions: ['admin', 'teacher'] },
-    children: [
-      {
-        path: 'courses',
-        name: 'TeacherCourses',
-        component: () => import('@/views/teacher/courses/index'),
-        meta: { title: '我的课程', icon: 'book-open' }
-      },
-      {
-        path: 'courses/:courseId/students',
-        name: 'TeacherCourseStudents',
-        component: () => import('@/views/teacher/courses/CourseStudents'),
-        meta: { title: '课程学生管理', noKeepAlive: true },
-        hidden: true
-      },
-      {
-        path: 'attendance',
-        name: 'TeacherAttendance',
-        component: () => import('@/views/teacher/attendance/index'),
-        meta: { title: '考勤管理', icon: 'tasks' }
-      },
-      {
-        path: 'attendance/details/:taskId',
-        name: 'TeacherTaskDetails',
-        component: () => import('@/views/teacher/attendance/TaskDetails'),
-        meta: { title: '签到详情', noKeepAlive: true },
-        hidden: true,
-        props: true
-      },
-      {
-        path: 'attendance/appeals',
-        name: 'TeacherAppeals',
-        component: () => import('@/views/teacher/attendance/appeals'),
-        meta: { title: '签到申诉处理', icon: 'exclamation-circle' }
-      },
-      {
-        path: 'statistics/rates',
-        name: 'TeacherCourseRates',
-        component: () => import('@/views/teacher/statistics/CourseRates'),
-        meta: { title: '签到率统计', icon: 'chart-bar' }
-      },
-    ]
-  },
-  {
-    path: '/student',
-    component: Layout,
-    redirect: 'noRedirect',
-    name: 'StudentManage',
-    meta: {
-      title: '学生端',
-      icon: 'user-graduate',
-      permissions: ['admin', 'student']  // 管理员和学生可访问
-    },
-    children: [
-      {
-        path: 'courses',
-        name: 'StudentCourses',
-        component: () => import('@/views/student/courses/index'),
-        meta: {
-          title: '我的课程',
-          permissions: ['admin', 'student']
-        },
-      },
-      {
-        path: 'attendance',
-        name: 'StudentAttendance',
-        component: () => import('@/views/student/attendance/index'),
-        meta: {
-          title: '我的考勤',
-          permissions: ['admin', 'student']
-        },
-      },
-      {
-        path: 'appeals',
-        name: 'StudentAppeals',
-        component: () => import('@/views/student/attendance/appeals'),
-        meta: {
-          title: '申诉管理',
-          permissions: ['admin', 'student']
-        },
-      }
-    ]
-  },
-  {
-    path: '/admin',
-    component: Layout,
-    redirect: 'noRedirect',
-    name: 'AdminManage',
-    meta: { 
-      title: '系统管理',
-      icon: 'cog',
-      permissions: ['admin']  // 只有管理员可访问
-    },
-    children: [
-      {
-        path: 'users',
-        name: 'UserManagement',
-        component: () => import('@/views/admin/users/index'),
-        meta: { 
-          title: '用户管理',
-          permissions: ['admin']
-        },
-      }
-    ]
-  },
-  {
     path: '/personalCenter',
     component: Layout,
-    redirect: 'noRedirect',
-    name: 'PersonalCenter',
-    meta: { 
-      title: '个人中心',
-      icon: 'user',
-      permissions: ['admin', 'teacher', 'student']  // 所有角色都可访问
-    },
+    redirect: '/personalCenter/personalCenter',
+    meta: { title: '个人中心', icon: 'user-circle', permissions: ['admin', 'teacher', 'student'] },
     children: [
       {
-        path: 'index',
-        name: 'PersonalCenterIndex',
+        path: 'personalCenter',
+        name: 'PersonalCenter',
         component: () => import('@/views/personalCenter/index'),
-        meta: { 
-          title: '个人信息',
-          permissions: ['admin', 'teacher', 'student']
-        },
+        meta: { title: '个人中心' }, // Keep title for breadcrumb/tab
+      },
+    ],
+  },
+
+  // --- Flattened Teacher Routes ---
+  {
+    path: '/teacher/courses', // Full path for the menu item
+    component: Layout,        // Must use Layout
+    // No redirect needed if child path is empty or 'index'
+    meta: { title: '我的课程', icon: 'book-open', roles: ['教师'], permissions: ['admin', 'teacher'] }, // Meta from original child
+    children: [
+      {
+        path: '', // Empty path makes this the default view for /teacher/courses
+        name: 'TeacherCourses',
+        component: () => import('@/views/teacher/courses/index'),
+        // Meta can be minimal here if parent handles title/icon
+        meta: { title: '我的课程', noKeepAlive: true }
       }
     ]
   },
+  // Hidden route for student management (needs Layout wrapper)
   {
-    path: '*',
-    redirect: '/404',
-    hidden: true,
+     path: '/teacher/course_students_layout', // Needs a unique path for the layout wrapper
+     component: Layout,
+     hidden: true, // Hide this wrapper from sidebar
+     meta: { roles: ['教师'], permissions: ['admin', 'teacher'] }, // Permissions needed on wrapper
+     children: [
+        {
+           path: '/teacher/courses/:courseId/students', // Use the actual full path for the component
+           name: 'TeacherCourseStudents',
+           component: () => import('@/views/teacher/courses/CourseStudents'),
+           meta: { title: '课程学生管理', noKeepAlive: true }, // Keep original meta for breadcrumb/tab
+        }
+     ]
   },
+  {
+    path: '/teacher/attendance',
+    component: Layout,
+    meta: { title: '考勤管理', icon: 'tasks', roles: ['教师'], permissions: ['admin', 'teacher'] },
+    children: [
+       {
+          path: '', // Default view for /teacher/attendance
+          name: 'TeacherAttendance',
+          component: () => import('@/views/teacher/attendance/index'),
+          meta: { title: '考勤管理', noKeepAlive: true }
+       }
+    ]
+  },
+  // Hidden route for task details (needs Layout wrapper)
+   {
+     path: '/teacher/attendance_details_layout',
+     component: Layout,
+     hidden: true,
+     meta: { roles: ['教师'], permissions: ['admin', 'teacher'] },
+     children: [
+        {
+           path: '/teacher/attendance/details/:taskId',
+           name: 'TeacherTaskDetails',
+           component: () => import('@/views/teacher/attendance/TaskDetails'),
+           meta: { title: '签到详情', noKeepAlive: true },
+           props: true // Keep props: true
+        }
+     ]
+  },
+  {
+    path: '/teacher/attendance/appeals',
+    component: Layout,
+    meta: { title: '签到申诉处理', icon: 'exclamation-circle', roles: ['教师'], permissions: ['admin', 'teacher'] },
+     children: [
+        {
+           path: '',
+           name: 'TeacherAppeals',
+           component: () => import('@/views/teacher/attendance/appeals'),
+           meta: { title: '签到申诉处理', noKeepAlive: true }
+        }
+     ]
+  },
+  {
+    path: '/teacher/statistics/rates',
+    component: Layout,
+    meta: { title: '签到率统计', icon: 'chart-bar', roles: ['教师'], permissions: ['admin', 'teacher'] },
+     children: [
+        {
+           path: '',
+           name: 'TeacherCourseRates',
+           component: () => import('@/views/teacher/statistics/CourseRates'),
+           meta: { title: '签到率统计', noKeepAlive: true }
+        }
+     ]
+  },
+  // --- End Flattened Teacher Routes ---
+
+
+  // --- Flattened Student Routes ---
+  {
+    path: '/student/courses', // Full path
+    component: Layout,
+    meta: { title: '我的课程', icon: 'book-reader', permissions: ['admin', 'student'] }, // Use appropriate icon
+    children: [
+      {
+        path: '',
+        name: 'StudentCourses',
+        component: () => import('@/views/student/courses/index'),
+        meta: { title: '我的课程', noKeepAlive: true }
+      },
+    ]
+  },
+  {
+    path: '/student/attendance',
+    component: Layout,
+    meta: { title: '我的考勤', icon: 'calendar-check', permissions: ['admin', 'student'] }, // Use appropriate icon
+    children: [
+      {
+        path: '',
+        name: 'StudentAttendance',
+        component: () => import('@/views/student/attendance/index'),
+        meta: { title: '我的考勤', noKeepAlive: true }
+      },
+    ]
+  },
+  {
+    path: '/student/appeals',
+    component: Layout,
+    meta: { title: '申诉管理', icon: 'file-signature', permissions: ['admin', 'student'] }, // Use appropriate icon
+    children: [
+      {
+        path: '',
+        name: 'StudentAppeals',
+        component: () => import('@/views/student/attendance/appeals'),
+        meta: { title: '申诉管理', noKeepAlive: true }
+      },
+    ]
+  },
+  // --- End Flattened Student Routes ---
+
+  // --- Admin Routes (Example - Assuming they might also be flattened or kept as is) ---
+  // If you want to flatten Admin routes, follow the same pattern
+  // Example: Keeping Admin nested (if desired)
+  {
+     path: '/admin',
+     component: Layout,
+     redirect: '/admin/users', // Redirect to the first admin page
+     meta: { title: '系统管理', icon: 'cog', permissions: ['admin'] }, // Only admin
+     children: [
+       {
+         path: 'users',
+         name: 'AdminUsers',
+         component: () => import('@/views/admin/users/index'), // Adjust path if needed
+         meta: { title: '用户管理', icon: 'users-cog' }
+       },
+       // Add other admin sub-routes here
+     ]
+   },
+  // --- End Admin Routes ---
+
+  { path: '*', redirect: '/404', hidden: true },
 ]
 
-const router = new VueRouter({
+const router = new Router({
   base: publicPath,
   mode: routerMode,
   scrollBehavior: () => ({

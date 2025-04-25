@@ -6,8 +6,7 @@
         :md="{ span: 20, offset: 2 }"
         :sm="{ span: 20, offset: 2 }"
         :xl="{ span: 12, offset: 6 }"
-        :xs="24"
-      >
+        :xs="24">
         <el-steps :active="active" align-center class="steps" :space="200">
           <el-step title="填写转账信息" />
           <el-step title="确认转账信息" />

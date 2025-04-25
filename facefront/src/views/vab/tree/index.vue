@@ -19,8 +19,7 @@
           @check="checkNode"
           @node-click="nodeClick"
           @node-collapse="nodeCollapse"
-          @node-expand="nodeExpand"
-        >
+          @node-expand="nodeExpand">
           <template #defalut="{ node, data }" class="vab-custom-tree-node">
             <span class="vab-tree-item">
               <i v-if="node.data.rank == 4" class="el-icon-s-custom"></i>
@@ -53,8 +52,7 @@
             highlight-current
             node-key="indexCode"
             :props="defaultProps"
-            @node-click="nodeClick"
-          >
+            @node-click="nodeClick">
             <template #defalut="{ node }" class="vab-custom-tree-node">
               <span class="vab-tree-item">
                 <i v-if="node.data.rank == 4" class="el-icon-s-custom"></i>
@@ -85,8 +83,7 @@
             :load="loadNode"
             node-key="indexCode"
             :props="defaultProps"
-            @node-click="nodeClick"
-          >
+            @node-click="nodeClick">
             <template #defalut="{ node }" class="vab-custom-tree-node">
               <span class="vab-tree-item">
                 <i v-if="node.data.rank == 4" class="el-icon-s-custom"></i>
@@ -114,8 +111,7 @@
           clearable
           popper-class="select-tree-popper"
           value-key="id"
-          @clear="selectTreeClearHandle('single')"
-        >
+          @clear="selectTreeClearHandle('single')">
           <el-option :value="singleSelectTreeKey">
             <el-tree
               id="singleSelectTree"
@@ -126,8 +122,7 @@
               :highlight-current="true"
               node-key="id"
               :props="selectTreeDefaultProps"
-              @node-click="selectTreeNodeClick"
-            >
+              @node-click="selectTreeNodeClick">
               <template #defalut="{ node }" class="vab-custom-tree-node">
                 <span class="vab-tree-item">{{ node.label }}</span>
               </template>
@@ -146,8 +141,7 @@
           popper-class="select-tree-popper"
           @change="changeMultipleSelectTreeHandle"
           @clear="selectTreeClearHandle('multiple')"
-          @remove-tag="removeSelectTreeTag"
-        >
+          @remove-tag="removeSelectTreeTag">
           <el-option :value="multipleSelectTreeKey">
             <el-tree
               id="multipleSelectTree"
@@ -160,8 +154,7 @@
               node-key="id"
               :props="selectTreeDefaultProps"
               show-checkbox
-              @check="multipleSelectTreeCheckNode"
-            />
+              @check="multipleSelectTreeCheckNode"/>
           </el-option>
         </el-select>
       </el-col>
@@ -172,8 +165,7 @@
       :title="dialogTitle"
       :visible.sync="treeDialogVisible"
       width="400px"
-      @close="treeDialogVisible = false"
-    >
+      @close="treeDialogVisible = false">
       <el-form ref="treeForm" :model="treeForm">
         <el-form-item label="节点名称" required>
           <el-input v-model="treeForm.name" />

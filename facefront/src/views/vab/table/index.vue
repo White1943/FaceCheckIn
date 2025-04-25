@@ -28,8 +28,7 @@
       :element-loading-text="elementLoadingText"
       :height="height"
       @selection-change="setSelectRows"
-      @sort-change="tableSortChange"
-    >
+      @sort-change="tableSortChange">
       <el-table-column show-overflow-tooltip type="selection" width="55" />
       <el-table-column label="序号" show-overflow-tooltip width="95">
         <template #default="scope">
@@ -68,8 +67,7 @@
       :page-size="queryForm.pageSize"
       :total="total"
       @current-change="handleCurrentChange"
-      @size-change="handleSizeChange"
-    />
+      @size-change="handleSizeChange"/>
     <table-edit ref="edit" />
   </div>
 </template>

@@ -7,8 +7,7 @@
             <a href="https://github.com/zxwk1998/vue-admin-better" target="_blank">
               <img
                 src="https://img.shields.io/github/stars/zxwk1998/vue-admin-better?style=flat-square&label=Stars&logo=github"
-                style="margin-right: 10px"
-              />
+                style="margin-right: 10px"/>
             </a>
             <p v-html="noticeList.notice"></p>
           </div>

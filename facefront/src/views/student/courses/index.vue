@@ -7,8 +7,7 @@
           placeholder="搜索课程"
           style="width: 200px"
           class="filter-item"
-          @keyup.enter.native="handleFilter"
-        />
+          @keyup.enter.native="handleFilter"/>
         <el-button class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
           搜索
         </el-button>
@@ -16,7 +15,7 @@
 
       <el-tabs v-model="activeTab" @tab-click="handleTabChange">
         <el-tab-pane label="我的课程" name="enrolled">
-          <el-table :data="enrolledCourses" v-loading="loading" empty-text="暂无数据">
+          <el-table v-loading="loading" :data="enrolledCourses" empty-text="暂无数据">
             <el-table-column prop="courseName" label="课程名称"></el-table-column>
             <el-table-column prop="teacherName" label="教师"></el-table-column>
             <el-table-column prop="semester" label="学期"></el-table-column>
@@ -30,7 +29,7 @@
         </el-tab-pane>
 
         <el-tab-pane label="选课" name="available">
-          <el-table :data="availableCourses" v-loading="loading" empty-text="暂无可选课程">
+          <el-table v-loading="loading" :data="availableCourses" empty-text="暂无可选课程">
             <el-table-column prop="courseName" label="课程名称"></el-table-column>
             <el-table-column prop="teacherName" label="教师"></el-table-column>
             <el-table-column prop="semester" label="学期"></el-table-column>
@@ -46,8 +45,7 @@
                   type="primary" 
                   size="small"
                   :disabled="scope.row.selected"
-                  @click="handleSelect(scope.row)"
-                >
+                  @click="handleSelect(scope.row)">
                   {{ scope.row.selected ? '已选' : '选课' }}
                 </el-button>
               </template>

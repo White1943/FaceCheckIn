@@ -3,7 +3,7 @@
     <el-card>
       <el-tabs v-model="activeTab">
         <el-tab-pane label="当前可签到" name="active">
-          <el-table :data="activeTasks" v-loading="loading">
+          <el-table v-loading="loading" :data="activeTasks">
             <el-table-column label="课程" prop="courseName" />
             <el-table-column label="教师" prop="teacherName" />
             <el-table-column label="签到时间">
@@ -16,8 +16,7 @@
                 <el-button 
                   type="primary" 
                   size="small" 
-                  @click="openFaceRecognition(scope.row)"
-                >
+                  @click="openFaceRecognition(scope.row)">
                   人脸签到
                 </el-button>
               </template>
@@ -26,7 +25,7 @@
         </el-tab-pane>
 
         <el-tab-pane label="签到记录" name="history">
-          <el-table :data="historyRecords" v-loading="loading">
+          <el-table v-loading="loading" :data="historyRecords">
             <el-table-column label="课程" prop="courseName" />
             <el-table-column label="教师" prop="teacherName" />
             <el-table-column label="签到时间">
@@ -94,14 +93,13 @@
       title="提交签到申诉" 
       :visible.sync="appealDialogVisible" 
       width="500px">
-      <el-form :model="appealForm" ref="appealForm" :rules="appealRules" label-width="80px">
+      <el-form ref="appealForm" :model="appealForm" :rules="appealRules" label-width="80px">
         <el-form-item label="申诉理由" prop="reason">
           <el-input 
-            type="textarea" 
             v-model="appealForm.reason" 
+            type="textarea" 
             :rows="6"
-            placeholder="请详细说明签到异常的原因，如光线不足、网络问题等"
-          ></el-input>
+            placeholder="请详细说明签到异常的原因，如光线不足、网络问题等"></el-input>
         </el-form-item>
       </el-form>
       <div slot="footer">
@@ -143,8 +141,21 @@ export default {
       }
     }
   },
+  watch: {
+    activeTab() {
+      this.fetchData();
+    },
+    cameraDialogVisible(val) {
+      if (!val) {
+        this.stopCamera();
+      }
+    }
+  },
   created() {
     this.fetchData()
+  },
+  beforeDestroy() {
+    this.stopCamera();
   },
   methods: {
     async fetchData() {
@@ -391,19 +402,6 @@ export default {
         }
       });
     }
-  },
-  watch: {
-    activeTab() {
-      this.fetchData();
-    },
-    cameraDialogVisible(val) {
-      if (!val) {
-        this.stopCamera();
-      }
-    }
-  },
-  beforeDestroy() {
-    this.stopCamera();
   }
 }
 </script>

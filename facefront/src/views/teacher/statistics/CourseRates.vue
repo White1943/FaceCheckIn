@@ -8,23 +8,20 @@
             v-model="selectedCourseId"
             placeholder="筛选课程"
             clearable
-            @change="fetchRates"
             style="margin-right: 10px;"
-          >
+            @change="fetchRates">
             <el-option
               v-for="course in teacherCourses"
               :key="course.courseId"
               :label="course.courseName"
-              :value="course.courseId"
-            />
+              :value="course.courseId"/>
           </el-select>
           <el-button
             type="success"
             icon="el-icon-download"
-            @click="handleExport"
             :disabled="loading || chartData.length === 0"
             style="margin-left: 10px;"
-          >
+            @click="handleExport">
             导出数据
           </el-button>
           <el-button type="primary" icon="el-icon-refresh" @click="fetchRates">刷新</el-button>
@@ -37,7 +34,7 @@
       </div>
 
       <!-- Optional: Display data in a table as well -->
-       <el-table :data="chartData" style="width: 100%; margin-top: 20px;" v-if="chartData.length > 0">
+       <el-table v-if="chartData.length > 0" :data="chartData" style="width: 100%; margin-top: 20px;">
          <el-table-column prop="courseName" label="课程名称" />
          <el-table-column prop="date" label="任务时间" />
          <el-table-column prop="attendanceRate" label="签到率 (%)" />

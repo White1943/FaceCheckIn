@@ -43,8 +43,7 @@
       :page-size="queryForm.pageSize"
       :total="total"
       @current-change="handleCurrentChange"
-      @size-change="handleSizeChange"
-    />
+      @size-change="handleSizeChange"/>
   </div>
 </template>
 

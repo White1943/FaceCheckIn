@@ -8,7 +8,7 @@
 
 
       <div class="avatar-section">
-        <div class="current-avatar" v-if="userInfo.avatar">
+        <div v-if="userInfo.avatar" class="current-avatar">
           <span>当前头像：</span>
           <img :src="userInfo.avatar" class="avatar-image">
         </div>
@@ -31,7 +31,7 @@
         </el-dialog>
         
         <div class="upload-actions">
-          <el-button type="primary" @click="uploadAvatar" :disabled="fileList.length === 0">
+          <el-button type="primary" :disabled="fileList.length === 0" @click="uploadAvatar">
             上传头像
           </el-button>
           <div class="upload-tip">支持jpg、png格式，大小不超过2MB</div>
@@ -44,7 +44,7 @@
         <span>个人信息</span>
       </div>
       
-      <el-form :model="userInfo" :rules="rules" ref="userForm" label-width="100px">
+      <el-form ref="userForm" :model="userInfo" :rules="rules" label-width="100px">
         <el-form-item label="用户名" prop="username">
           <el-input v-model="userInfo.username" disabled></el-input>
         </el-form-item>
@@ -72,7 +72,7 @@
         <span>修改密码</span>
       </div>
       
-      <el-form :model="passwordForm" :rules="passwordRules" ref="passwordForm" label-width="100px">
+      <el-form ref="passwordForm" :model="passwordForm" :rules="passwordRules" label-width="100px">
         <el-form-item label="原密码" prop="oldPassword">
           <el-input v-model="passwordForm.oldPassword" type="password"></el-input>
         </el-form-item>

@@ -5,7 +5,7 @@
         <span>签到申诉记录</span>
       </div>
       
-      <el-table :data="appealsList" v-loading="loading">
+      <el-table v-loading="loading" :data="appealsList">
         <el-table-column label="课程" prop="courseName" />
         <el-table-column label="签到时间" prop="checkInTime" />
         <el-table-column label="状态">
@@ -23,7 +23,7 @@
         <el-table-column label="申诉理由" prop="appealReason" show-overflow-tooltip />
       </el-table>
       
-      <div class="empty-block" v-if="appealsList.length === 0 && !loading">
+      <div v-if="appealsList.length === 0 && !loading" class="empty-block">
         <el-empty description="暂无申诉记录"></el-empty>
       </div>
     </el-card>

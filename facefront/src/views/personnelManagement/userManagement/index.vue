@@ -46,8 +46,7 @@
       :page-size="queryForm.pageSize"
       :total="total"
       @current-change="handleCurrentChange"
-      @size-change="handleSizeChange"
-    />
+      @size-change="handleSizeChange"/>
     <edit ref="edit" @fetch-data="fetchData" />
   </div>
 </template>

@@ -6,7 +6,7 @@
         <el-button type="primary" icon="el-icon-refresh" @click="fetchDetails">刷新</el-button>
       </div>
 
-      <el-table :data="studentList" v-loading="loading" style="width: 100%">
+      <el-table v-loading="loading" :data="studentList" style="width: 100%">
         <el-table-column label="学生姓名" prop="studentName" min-width="120" />
         <el-table-column label="签到状态" prop="status" min-width="100">
            <template slot-scope="scope">

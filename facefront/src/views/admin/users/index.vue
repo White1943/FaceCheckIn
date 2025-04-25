@@ -5,8 +5,7 @@
         <el-input
           v-model="searchQuery"
           placeholder="搜索用户"
-          style="width: 200px; margin-right: 10px"
-        />
+          style="width: 200px; margin-right: 10px"/>
         <el-select v-model="roleFilter" placeholder="角色" style="width: 120px; margin-right: 10px">
           <el-option label="全部" value="" />
           <el-option label="教师" value="教师" />
@@ -34,8 +33,7 @@
             <el-button 
               type="text" 
               :style="{ color: scope.row.status === 1 ? '#F56C6C' : '#67C23A' }"
-              @click="handleToggleStatus(scope.row)"
-            >
+              @click="handleToggleStatus(scope.row)">
               {{ scope.row.status === 1 ? '禁用' : '启用' }}
             </el-button>
           </template>
@@ -49,7 +47,7 @@
         <el-form-item label="用户名" prop="username">
           <el-input v-model="userForm.username" :disabled="isEdit" />
         </el-form-item>
-        <el-form-item label="密码" prop="password" v-if="!isEdit">
+        <el-form-item v-if="!isEdit" label="密码" prop="password">
           <el-input v-model="userForm.password" type="password" />
         </el-form-item>
         <el-form-item label="真实姓名" prop="realName">

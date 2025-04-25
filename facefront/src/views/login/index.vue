@@ -25,8 +25,7 @@
               placeholder="请输入密码"
               tabindex="2"
               :type="passwordType"
-              @keyup.enter.native="handleLogin"
-            />
+              @keyup.enter.native="handleLogin"/>
             <span v-if="passwordType === 'password'" class="show-password" @click="handlePassword">
               <vab-icon :icon="['fas', 'eye-slash']" />
             </span>
@@ -136,7 +135,7 @@
             this.$store
               .dispatch('user/login', this.form)
               .then(() => {
-                const routerPath = this.redirect === '/404' || this.redirect === '/401' ? '/' : this.redirect
+                const routerPath = '/personalCenter/personalCenter'
                 this.$router.push(routerPath).catch(() => {})
                 this.loading = false
               })

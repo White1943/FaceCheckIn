@@ -4,8 +4,7 @@
       <el-alert
         :closable="false"
         :title="`支持jpg、jpeg、png格式，单次可最多选择${limit}张图片，每张不可大于${size}M，如果大于${size}M会自动为您过滤`"
-        type="info"
-      />
+        type="info"/>
       <br />
       <el-upload
         ref="upload"
@@ -27,8 +26,7 @@
         :on-preview="handlePreview"
         :on-progress="handleProgress"
         :on-remove="handleRemove"
-        :on-success="handleSuccess"
-      >
+        :on-success="handleSuccess">
         <i slot="trigger" class="el-icon-plus"></i>
         <el-dialog append-to-body title="查看大图" :visible.sync="dialogVisible">
           <div>

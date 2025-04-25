@@ -38,8 +38,7 @@
             end-placeholder="结束时间"
             range-separator="至"
             start-placeholder="开始时间"
-            type="datetimerange"
-          />
+            type="datetimerange"/>
         </el-form-item>
 
         <el-form-item label="签到说明" prop="description">

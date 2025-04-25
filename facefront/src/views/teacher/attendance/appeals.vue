@@ -7,12 +7,11 @@
       </div>
       
       <el-table 
-        :data="appealsList" 
         v-loading="loading" 
+        :data="appealsList" 
         border 
         style="width: 100%"
-        :header-cell-style="{background:'#f5f7fa', color:'#606266'}"
-      >
+        :header-cell-style="{background:'#f5f7fa', color:'#606266'}">
         <el-table-column label="学生" prop="studentName" min-width="100" />
         <el-table-column label="课程" prop="courseName" min-width="160" />
         <el-table-column label="签到时间" prop="checkInTime" min-width="160" />
@@ -25,9 +24,8 @@
                 plain
                 size="small" 
                 icon="el-icon-picture"
-                @click="viewPhoto(scope.row)"
                 :disabled="!scope.row.faceImage"
-              >
+                @click="viewPhoto(scope.row)">
                 查看照片
               </el-button>
               <div class="approval-buttons">
@@ -35,16 +33,14 @@
                   type="success" 
                   size="small" 
                   icon="el-icon-check"
-                  @click="handleApprove(scope.row)"
-                >
+                  @click="handleApprove(scope.row)">
                   通过
                 </el-button>
                 <el-button 
                   type="danger" 
                   size="small" 
                   icon="el-icon-close"
-                  @click="handleReject(scope.row)"
-                >
+                  @click="handleReject(scope.row)">
                   拒绝
                 </el-button>
               </div>
@@ -53,7 +49,7 @@
         </el-table-column>
       </el-table>
       
-      <div class="empty-block" v-if="appealsList.length === 0 && !loading">
+      <div v-if="appealsList.length === 0 && !loading" class="empty-block">
         <el-empty description="暂无待审核的申诉">
           <el-button type="primary" @click="fetchAppeals">刷新</el-button>
         </el-empty>
@@ -61,15 +57,14 @@
       
       <el-pagination
         v-if="appealsList.length > 0"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
         :current-page="currentPage"
         :page-sizes="[10, 20, 50, 100]"
         :page-size="pageSize"
         layout="total, sizes, prev, pager, next, jumper"
         :total="totalCount || appealsList.length"
         class="pagination"
-      >
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange">
       </el-pagination>
     </el-card>
     
@@ -78,12 +73,11 @@
       title="签到照片" 
       :visible.sync="photoDialogVisible" 
       width="500px"
-      custom-class="photo-dialog"
-    >
-      <div class="photo-container" v-if="currentPhoto">
+      custom-class="photo-dialog">
+      <div v-if="currentPhoto" class="photo-container">
         <img :src="currentPhoto" alt="签到照片" class="appeal-photo" />
       </div>
-      <div class="photo-info" v-if="currentRecord">
+      <div v-if="currentRecord" class="photo-info">
         <p><strong>学生：</strong>{{ currentRecord.studentName }}</p>
         <p><strong>签到时间：</strong>{{ currentRecord.checkInTime }}</p>
         <p><strong>申诉理由：</strong>{{ currentRecord.appealReason }}</p>

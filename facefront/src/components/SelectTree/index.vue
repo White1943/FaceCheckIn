@@ -8,8 +8,7 @@
       :multiple="selectType == 'multiple'"
       value-key="id"
       @clear="clearHandle"
-      @remove-tag="removeTag"
-    >
+      @remove-tag="removeTag">
       <el-option :value="selectKey">
         <el-tree
           id="treeOption"
@@ -23,8 +22,7 @@
           :props="defaultProps"
           :show-checkbox="selectType == 'multiple'"
           @check="checkNode"
-          @node-click="nodeClick"
-        />
+          @node-click="nodeClick"/>
       </el-option>
     </el-select>
   </div>
