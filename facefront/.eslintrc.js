@@ -7,6 +7,7 @@ module.exports = {
   root: true,
   env: {
     node: true,
+    browser: true
   },
   extends: ['plugin:vue/recommended', 'eslint:recommended', '@vue/prettier'],
   rules: {
@@ -25,11 +26,22 @@ module.exports = {
     'no-unused-vars': 'off',
     'vue/no-useless-template-attributes': 'off',
     'use-isnan': 'off',
-    'vue/attributes-order': 'off',
-    'vue/order-in-components': 'off',
+    'vue/attributes-order': 'warn',
+    'vue/order-in-components': 'warn',
     'vue/max-attributes-per-line': 'off',
     'vue/singleline-html-element-content-newline': 'off',
-    'vue/multiline-html-element-content-newline': 'off'
+    'vue/multiline-html-element-content-newline': 'off',
+    'vue/first-attribute-linebreak': ['error', {
+      singleline: 'ignore',
+      multiline: 'ignore'
+    }],
+    'vue/html-closing-bracket-newline': ['error', {
+      singleline: 'never',
+      multiline: 'never'
+    }],
+    'vue/html-self-closing': 'off',
+    'vue/attribute-hyphenation': 'off',
+    'vue/multi-word-component-names': 'off'
   },
   parserOptions: {
     parser: 'babel-eslint',

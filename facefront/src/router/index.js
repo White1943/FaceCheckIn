@@ -307,7 +307,7 @@ export const asyncRoutes = [
     path: '/teacher',
     component: Layout,
     redirect: '/teacher/courses',
-    meta: { title: '教师功能', icon: 'chalkboard-teacher', roles: ['教师'] },
+    meta: { title: '教师功能', icon: 'chalkboard-teacher', roles: ['教师'], permissions: ['admin', 'teacher'] },
     children: [
       {
         path: 'courses',

@@ -32,7 +32,7 @@
 
 <script>
   export default {
-    name: 'Page401',
+    name: 'ErrorPage401',
     data() {
       return {
         jumpTime: 5,
