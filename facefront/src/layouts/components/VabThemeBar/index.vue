@@ -1,16 +1,7 @@
 <template>
   <span v-if="themeBar">
     <vab-icon :icon="['fas', 'palette']" title="主题配置" @click="handleOpenThemeBar" />
-    <!-- <div class="theme-bar-setting">
-      <div @click="handleOpenThemeBar">
-        <vab-icon :icon="['fas', 'palette']" />
-        <p>主题配置</p>
-      </div>
-      <div @click="handleGetCode">
-        <vab-icon :icon="['fas', 'laptop-code']"></vab-icon>
-        <p>拷贝源码</p>
-      </div>
-    </div> -->
+ww -->
 
     <el-drawer :visible.sync="drawerVisible" append-to-body direction="rtl" size="300px" title="主题配置">
       <el-scrollbar style="height: 80vh; overflow: hidden">

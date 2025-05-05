@@ -23,24 +23,20 @@ private_key = rsa.generate_private_key(
     backend=default_backend()
 )
 public_key = private_key.public_key()
-
 def decrypt_password(encrypted_password, private_key):
     try:
         # Base64解码
         encrypted_bytes = base64.b64decode(encrypted_password)
-
         # RSA解密
         decrypted_bytes = private_key.decrypt(
             encrypted_bytes,
             asym_padding.PKCS1v15()
         )
-
         # 转换为字符串
         return decrypted_bytes.decode('utf-8')
     except Exception as e:
         print(f"解密失败: {str(e)}")
         return None
-
 @auth_bp.route('/public-key', methods=['GET'])
 def get_public_key():
     try:
@@ -58,7 +54,6 @@ def get_public_key():
     except Exception as e:
         print(f"获取公钥失败: {str(e)}")
         return Result.error("获取公钥失败")
-
 @auth_bp.route('/login', methods=['POST'])
 def login():
     try:
@@ -72,13 +67,10 @@ def login():
         print("解密后的密码"+password)
         if not username or not password:
             return Result.error("用户名和密码不能为空")
-
         user = User.query.filter_by(username=username).first()
-
         if user and user.check_password(password):
             if user.status == 0:
                 return Result.error("账号已被禁用")
-
                 # 创建JWT token，使用user.user_id作为identity
             # 安全，避免在请求参数中明文传递用户ID
             # 可靠，token中的用户ID不可被篡改
@@ -88,30 +80,24 @@ def login():
                 'token': access_token,
                 'user': user.to_dict()
             }, message='登录成功')
-
         return Result.error("用户名或密码错误")
-
     except Exception as e:
         print("Login error:", str(e))
         return Result.error("登录失败")
-
 @auth_bp.route('/register', methods=['POST'])
 def register():
     try:
         data = request.get_json()
         print("Parsed JSON data:", data)
-
         # 数据验证
         required_fields = ['username', 'password', 'realName', 'role']
         for field in required_fields:
             if not data.get(field):
                 return Result.error(f'请填写{field}', code=400)
-
         # 检查用户名是否已存在
         existing_user = User.query.filter_by(username=data['username']).first()
         if existing_user:
             return Result.error('用户名已存在', code=400)
-
         # 创建新用户
         try:
             user = User(
@@ -121,19 +107,14 @@ def register():
                 email=data.get('email')
             )
             user.set_password(data['password'])
-
             db.session.add(user)
             db.session.commit()
-
             return Result.success(message="注册成功")
-
         except Exception as e:
             db.session.rollback()
             return Result.error(f"注册失败: {str(e)}", code=500)
-
     except Exception as e:
         return Result.error(f"注册失败: {str(e)}", code=500)
-
 @auth_bp.route('/profile', methods=['GET'])
 @jwt_required()
 def get_profile():

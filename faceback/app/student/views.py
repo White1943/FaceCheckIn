@@ -44,28 +44,16 @@ def get_student_enrolled_courses():
         user = User.query.get(student_id)
         if not user or user.role != '学生':
             return Result.error("用户无效或非学生", code=403)
-
-        # --- Get search query ---
         search_term = request.args.get('search', None, type=str)
-        # --- End Get search query ---
-
-        # Base query using the relationship
         query = user.enrolled_courses
-
-        # --- Apply search filter ---
         if search_term:
             search_pattern = f"%{search_term}%"
             query = query.filter(
                 or_(
                     Course.course_name.like(search_pattern),
                     Course.description.like(search_pattern),
-                    # Add other searchable fields if needed
-                    # Course.location.like(search_pattern),
-                    # Course.teacher.has(User.real_name.like(search_pattern)) # Search teacher name (requires join)
-                )
+                   )
             )
-        # --- End Apply search filter ---
-
         enrolled_courses = query.order_by(Course.course_name).all()
         return Result.success(data=[course.to_dict() for course in enrolled_courses])
     except Exception as e:
@@ -102,10 +90,7 @@ def get_available_courses_for_student():
                  or_(
                     Course.course_name.like(search_pattern),
                     Course.description.like(search_pattern),
-                    # Add other searchable fields if needed
-                    # Course.location.like(search_pattern),
-                    # Course.teacher.has(User.real_name.like(search_pattern)) # Search teacher name (requires join)
-                )
+                    )
             )
         # --- End Apply search filter ---
 
@@ -119,7 +104,6 @@ def get_available_courses_for_student():
 @student_course_bp.route('/select', methods=['POST'])
 @jwt_required()
 def select_course_for_student():
-    """Allows the logged-in student to select/enroll in a course."""
     try:
         student_id = int(get_jwt_identity())
         user = User.query.get(student_id)
@@ -132,7 +116,6 @@ def select_course_for_student():
         course = Course.query.get(course_id)
         if not course: return Result.error("课程不存在", code=404)
         if course in user.enrolled_courses: return Result.error("您已选修此课程", code=400)
-        # Append using the relationship
         user.enrolled_courses.append(course)
         db.session.commit()
         return Result.success(message="选课成功")
@@ -157,20 +140,14 @@ def leave_course_route(course_id):
         user = User.query.get(student_id)
         if not user or user.role != '学生':
             return Result.error("用户无效或非学生", code=403)
-
         course = Course.query.get(course_id)
         if not course:
             return Result.error("课程不存在", code=404)
-
-        # Check if enrolled before trying to remove
         if course not in user.enrolled_courses:
             return Result.error("您未选修此课程", code=400)
-
-        # Remove using the relationship
         user.enrolled_courses.remove(course)
         db.session.commit()
         return Result.success(message="退课成功")
-
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error leaving course {course_id} for student {student_id}: {e}")

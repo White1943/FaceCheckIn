@@ -140,7 +140,7 @@
                 this.loading = false
               })
               .catch(() => {
-                this.loading = false
+                this.loadingww = false
               })
           } else {
             return false

@@ -143,7 +143,6 @@ def update_course(course_id):
              current_app.logger.error(f"Update: Error processing time {start_time_str}: {time_e}")
              traceback.print_exc()
              return Result.error(f"处理时间时出错: {time_e}", code=500)
-
         try:
             course.course_name = data['courseName']
             course.semester = data['semester']
@@ -158,7 +157,6 @@ def update_course(course_id):
             current_app.logger.error(f"Update DB Error: {db_e}")
             traceback.print_exc()
             return Result.error(f"更新课程到数据库时出错: {db_e}", code=500)
-
     except Exception as e:
         current_app.logger.error(f"Unexpected error in update_course: {e}")
         traceback.print_exc()
@@ -171,11 +169,9 @@ def delete_course(course_id):
         user_id = int(get_jwt_identity())
         user = User.query.get(user_id)
         if not user: return Result.error("用户不存在", 404)
-
         course = Course.query.get_or_404(course_id)
         if course.teacher_id != user_id:
             return Result.error("无权删除此课程", code=403)
-
         try:
             db.session.delete(course)
             db.session.commit()
@@ -185,7 +181,6 @@ def delete_course(course_id):
             current_app.logger.error(f"Delete DB Error: {db_e}")
             traceback.print_exc()
             return Result.error(f"删除课程时数据库出错: {db_e}", code=500)
-
     except Exception as e:
         current_app.logger.error(f"Unexpected error in delete_course: {e}")
         traceback.print_exc()
@@ -194,31 +189,18 @@ def delete_course(course_id):
 @course_bp.route('/teacher/courses/<int:course_id>/students', methods=['GET'])
 @jwt_required()
 def get_students_for_course(course_id):
-    """Fetches the list of students enrolled in a specific course."""
     try:
         teacher_id = int(get_jwt_identity())
         course = Course.query.get(course_id)
-
         if not course:
             return Result.error("课程不存在", code=404)
-
-        # Verify teacher owns the course
         if course.teacher_id != teacher_id:
             return Result.error("无权查看此课程的学生", code=403)
-
-        # Access students through the relationship
-        students = course.students.all() # Get all students related to this course
-
-        # Prepare data for response, using User's to_dict()
+        students = course.students.all() 
         student_data = []
         for student in students:
-             # Basic student info from User model's to_dict
              s_dict = student.to_dict()
-             # Add userId explicitly if not in to_dict
              s_dict['userId'] = student.user_id
-             # Optionally add join date from association table if needed
-             # join_record = CourseStudents.query.filter_by(course_id=course_id, student_id=student.user_id).first()
-             # s_dict['joinDate'] = join_record.join_date.isoformat() if join_record else None
              student_data.append(s_dict)
 
 

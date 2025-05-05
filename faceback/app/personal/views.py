@@ -11,21 +11,15 @@ from werkzeug.utils import secure_filename
 
 # 允许的文件类型
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'PNG', 'JPG', 'JPEG'}
-
-
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].upper() in ALLOWED_EXTENSIONS
-
-
 def generate_unique_filename(original_filename, user_id):
     """生成唯一的文件名"""
     # 获取文件扩展名
     ext = original_filename.rsplit('.', 1)[1].lower()
     # 生成文件名：avatar_用户ID_时间戳.扩展名
     return f'avatar_{user_id}_{int(time.time())}.{ext}'
-
-
 @personal_bp.route('/info', methods=['GET'])
 @jwt_required()
 def get_personal_info():

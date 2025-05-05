@@ -3,7 +3,6 @@ from datetime import datetime
 
 class Course(db.Model):
     __tablename__ = 'courses'
-
     course_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     course_name = db.Column(db.String(100), nullable=False)
     teacher_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
@@ -11,11 +10,8 @@ class Course(db.Model):
     description = db.Column(db.Text)
     start_time = db.Column(db.Time, nullable=False)
     end_time = db.Column(db.Time, nullable=False)
-
     location = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.now)
-
-    # 关系
     teacher = db.relationship('User', back_populates='teaching_courses')
     students = db.relationship(
         'User',
@@ -23,7 +19,6 @@ class Course(db.Model):
         back_populates='enrolled_courses',
         lazy='dynamic'
     )
-
     @staticmethod
     def get_end_time(start_time_str):
         """根据上课时间获取下课时间"""
@@ -39,7 +34,6 @@ class Course(db.Model):
     def to_dict(self):
         """Returns a dictionary representation of the Course object."""
         teacher_name = self.teacher.real_name if self.teacher else "N/A"
-
         return {
             'courseId': self.course_id,
             'courseName': self.course_name,

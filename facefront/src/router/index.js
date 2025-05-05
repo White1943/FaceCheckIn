@@ -73,8 +73,8 @@ export const asyncRoutes = [
      component: Layout,
      hidden: true, // Hide this wrapper from sidebar
      meta: { roles: ['教师'], permissions: ['admin', 'teacher'] }, // Permissions needed on wrapper
-     children: [
-        {
+        children: [
+          {
            path: '/teacher/courses/:courseId/students', // Use the actual full path for the component
            name: 'TeacherCourseStudents',
            component: () => import('@/views/teacher/courses/CourseStudents'),
@@ -87,7 +87,7 @@ export const asyncRoutes = [
     component: Layout,
     meta: { title: '考勤管理', icon: 'tasks', roles: ['教师'], permissions: ['admin', 'teacher'] },
     children: [
-       {
+      {
           path: '', // Default view for /teacher/attendance
           name: 'TeacherAttendance',
           component: () => import('@/views/teacher/attendance/index'),
@@ -115,8 +115,8 @@ export const asyncRoutes = [
     path: '/teacher/attendance/appeals',
     component: Layout,
     meta: { title: '签到申诉处理', icon: 'exclamation-circle', roles: ['教师'], permissions: ['admin', 'teacher'] },
-     children: [
-        {
+    children: [
+      {
            path: '',
            name: 'TeacherAppeals',
            component: () => import('@/views/teacher/attendance/appeals'),
@@ -128,8 +128,8 @@ export const asyncRoutes = [
     path: '/teacher/statistics/rates',
     component: Layout,
     meta: { title: '签到率统计', icon: 'chart-bar', roles: ['教师'], permissions: ['admin', 'teacher'] },
-     children: [
-        {
+    children: [
+      {
            path: '',
            name: 'TeacherCourseRates',
            component: () => import('@/views/teacher/statistics/CourseRates'),
